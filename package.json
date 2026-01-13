@@ -1,0 +1,53 @@
+{
+  "name": "gravity-core",
+  "version": "1.0.1",
+  "description": "Gravity - AI-powered CSS layout diagnostics for any IDE. Connect your browser to get real-time layout issue detection.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "gravity": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "SETUP.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test dist/**/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "devtools",
+    "browser",
+    "debugging",
+    "layout",
+    "diagnostics",
+    "ai",
+    "mcp",
+    "css",
+    "vscode",
+    "cursor",
+    "ide"
+  ],
+  "author": "Gravity Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DharuNamikaze/Gravity-Package.git"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.3"
+  }
+}
