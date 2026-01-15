@@ -90,7 +90,7 @@ export function detectGravityExtensionId(): string | null {
             try {
               const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
               // Check for both possible names
-              if (manifest.name === 'DevTools Bridge' || manifest.name === 'Gravity') {
+              if (manifest.name === 'Gravity') {
                 return folder;
               }
             } catch (e) {

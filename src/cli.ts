@@ -212,7 +212,7 @@ async function handleSetupNativeHost() {
 
   // Step 4: Patch manifest with extension ID and path
   const manifestPath = join(targetHostDir, 'manifest.json');
-  const hostBatPath = join(targetHostDir, 'devtools-bridge-host.bat');
+  const hostBatPath = join(targetHostDir, 'gravity-host.bat');
 
   try {
     patchManifest(manifestPath, extensionId, hostBatPath);
@@ -225,7 +225,7 @@ async function handleSetupNativeHost() {
   // Step 5: Write registry key
   console.error('📝 Writing registry key...');
   try {
-    writeRegistryKey('com.devtools.bridge', manifestPath);
+    writeRegistryKey('com.gravity.bridge', manifestPath);
     console.error('✅ Registry key written successfully');
   } catch (error: any) {
     console.error('❌ Failed to write registry key:', error.message);
@@ -258,7 +258,7 @@ async function handleTestConnection() {
 
   // Check 1: Registry key exists
   console.error('🔍 Checking registry key...');
-  const regKeyExists = registryKeyExists('com.devtools.bridge');
+  const regKeyExists = registryKeyExists('com.gravity.bridge');
   checks.push({ name: 'Registry key exists', passed: regKeyExists });
 
   if (regKeyExists) {
@@ -302,7 +302,7 @@ async function handleTestConnection() {
 
   // Check 4: Native host executable exists
   console.error('🔍 Checking native host executable...');
-  const hostPath = join(getGravityHostDir(), 'devtools-bridge-host.bat');
+  const hostPath = join(getGravityHostDir(), 'gravity-host.bat');
   const hostExists = nativeHostExists(hostPath);
   checks.push({ name: 'Native host executable found', passed: hostExists });
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "DevTools Bridge",
+  "name": "Gravity",
   "version": "1.0.0",
-  "description": "Connect your IDE to browser DevTools for real-time layout diagnostics",
+  "description": "Gravity - Browser DevTools integration for MCP server",
   "permissions": [
     "debugger",
     "tabs"

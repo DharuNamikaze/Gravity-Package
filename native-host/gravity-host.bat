@@ -1,5 +1,5 @@
 @echo off
-REM Gravity DevTools Bridge Native Host
+REM Gravity Native Host
 REM This script handles native messaging between Chrome extension and the Gravity MCP server
 
 setlocal enabledelayedexpansion

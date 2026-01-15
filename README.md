@@ -25,15 +25,23 @@ npm install gravity-core
 ### 2. Setup Extension
 
 ```bash
-gravity setup-extension
+npx gravity-core setup-extension
 ```
 
 This extracts the Chrome extension to `~/.gravity-extension`.
 
-### 3. Setup Native Host
+### 3. Load Extension in Chrome
+
+1. Open Chrome and go to `chrome://extensions`
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked"
+4. Select the `~/.gravity-extension` folder
+5. ✅ Done!
+
+### 4. Setup Native Host
 
 ```bash
-gravity setup-native-host
+npx gravity-core setup-native-host
 ```
 
 This:
@@ -42,18 +50,10 @@ This:
 - Sets up native messaging for Chrome
 - Optionally restarts Chrome
 
-### 4. Load Extension in Chrome
-
-1. Open Chrome and go to `chrome://extensions`
-2. Enable "Developer mode" (toggle in top right)
-3. Click "Load unpacked"
-4. Select the `~/.gravity-extension` folder
-5. ✅ Done!
-
 ### 5. Test Connection
 
 ```bash
-gravity test-connection
+npx gravity-core test-connection
 ```
 
 This verifies:
@@ -160,7 +160,7 @@ Browser Tab (DOM, CSS, Layout data)
 
 ### Fix Offscreen Modal
 
-1. Terminal: Run `gravity setup-extension` and `gravity setup-native-host`
+1. Terminal: Run `npx gravity-core setup-extension` and `npx gravity-core setup-native-host`
 2. Chrome: Load extension from `~/.gravity-extension`
 3. Browser: Open page with broken layout
 4. Extension: Click icon → "Connect to Tab" (🟢 Green)
@@ -186,7 +186,7 @@ Browser Tab (DOM, CSS, Layout data)
 Extract the Chrome extension to your home directory:
 
 ```bash
-gravity setup-extension
+npx gravity-core setup-extension
 ```
 
 Creates `~/.gravity-extension/` ready to load in Chrome.
@@ -196,7 +196,7 @@ Creates `~/.gravity-extension/` ready to load in Chrome.
 Configure native messaging for Chrome:
 
 ```bash
-gravity setup-native-host
+npx gravity-core setup-native-host
 ```
 
 This command:
@@ -212,7 +212,7 @@ This command:
 Verify everything is working:
 
 ```bash
-gravity test-connection
+npx gravity-core test-connection
 ```
 
 Checks:
@@ -228,13 +228,13 @@ Checks:
 Run the MCP server (used by your IDE):
 
 ```bash
-gravity
+npx gravity-core
 ```
 
 ### Show Help
 
 ```bash
-gravity --help
+npx gravity-core --help
 ```
 
 ## 🔧 API Reference
@@ -382,9 +382,9 @@ Contributions welcome! Please open an issue or PR on GitHub.
 
 ```bash
 npm install gravity-core
-gravity setup-extension
-gravity setup-native-host
-gravity test-connection
+npx gravity-core setup-extension
+npx gravity-core setup-native-host
+npx gravity-core test-connection
 ```
 
 Then configure your IDE and start debugging! 🎉

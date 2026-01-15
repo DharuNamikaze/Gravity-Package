@@ -124,7 +124,7 @@ rm -r ~/.gravity-extension
 rm -r ~/.gravity-host
 
 # Remove registry entry (Windows, optional)
-reg delete "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge" /f
+reg delete "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge" /f
 ```
 
 ## Common Workflows
@@ -199,14 +199,14 @@ gravity setup-extension
 
 ```bash
 # Windows: View registry key
-reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge"
+reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge"
 ```
 
 ### View Extension ID
 
 ```bash
 # Chrome: Go to chrome://extensions
-# Look for "DevTools Bridge" or "Gravity"
+# Look for "Gravity"
 # ID is shown below the name
 ```
 

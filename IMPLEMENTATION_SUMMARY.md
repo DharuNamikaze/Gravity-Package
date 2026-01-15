@@ -21,9 +21,9 @@ Implemented a comprehensive CLI system for Gravity that automates Chrome extensi
 - Copies native-host folder to `~/.gravity-host`
 - Patches manifest.json with:
   - Correct `allowed_origins` field with extension ID
-  - Path to `devtools-bridge-host.bat`
+  - Path to `gravity-host.bat`
 - Writes Windows registry entry:
-  - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge`
+  - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge`
 - Optionally prompts to restart Chrome
 
 #### `gravity test-connection`
@@ -78,7 +78,7 @@ Complete CLI implementation with:
 
 ### 3. New Project Files
 
-#### `native-host/devtools-bridge-host.bat`
+#### `native-host/gravity-host.bat`
 Windows batch script that:
 - Runs the Gravity MCP server
 - Handles native messaging protocol
@@ -127,14 +127,14 @@ Native messaging host manifest template with:
 
 ~/.gravity-host/               # Native messaging host
   ├── manifest.json            # (patched with extension ID)
-  └── devtools-bridge-host.bat
+  └── gravity-host.bat
 ```
 
 ### Registry Structure (Windows)
 
 ```
 HKCU\Software\Google\Chrome\NativeMessagingHosts\
-  └── com.devtools.bridge
+  └── com.gravity.bridge
       └── (Default) = "C:\Users\[user]\.gravity-host\manifest.json"
 ```
 
@@ -145,7 +145,7 @@ IDE (VSCode, Cursor, etc.)
   ↓ (MCP Protocol)
 gravity (MCP Server)
   ↓ (stdin/stdout)
-Native Messaging Host (devtools-bridge-host.bat)
+Native Messaging Host (gravity-host.bat)
   ↓ (WebSocket)
 Chrome Extension
   ↓ (DevTools Protocol)

@@ -65,7 +65,7 @@ This command:
 
 5. **Writes registry key**
    - Adds entry to Windows registry
-   - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge`
+   - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge`
 
 6. **Optionally restarts Chrome**
    ```
@@ -210,7 +210,7 @@ GRAVITY_TIMEOUT=20000 gravity
 2. Make sure you confirmed the registry modification
 3. Check registry manually:
    ```
-   reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge"
+   reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge"
    ```
 
 ### "WebSocket connection failed" (test-connection)
@@ -284,7 +284,7 @@ To remove Gravity:
 
 4. Remove registry entry (optional, Windows):
    ```
-   reg delete "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge" /f
+   reg delete "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge" /f
    ```
 
 ## Getting Help
