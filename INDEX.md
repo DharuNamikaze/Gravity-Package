@@ -41,9 +41,6 @@ Welcome to Gravity! This is your guide to all documentation.
 ### "I need detailed setup instructions"
 → Read [SETUP.md](./SETUP.md)
 
-### "I want to understand how it works"
-→ Read [ARCHITECTURE.md](./ARCHITECTURE.md)
-
 ### "I need API documentation"
 → Read [README.md](./README.md)
 
