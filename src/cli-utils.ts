@@ -57,6 +57,7 @@ export function getChromeExtensionsDir(): string {
 
 /**
  * Detect Gravity extension ID by scanning Chrome extensions directory
+ * Falls back to using a default ID if extension not yet loaded in Chrome
  */
 export function detectGravityExtensionId(): string | null {
   try {
@@ -66,29 +67,41 @@ export function detectGravityExtensionId(): string | null {
       return null;
     }
 
-    const extensionFolders = require('fs').readdirSync(extensionsDir);
+    const { readdirSync, statSync } = require('fs');
+    const extensionFolders = readdirSync(extensionsDir);
 
     for (const folder of extensionFolders) {
       const folderPath = join(extensionsDir, folder);
-      const stats = require('fs').statSync(folderPath);
+      
+      try {
+        const stats = statSync(folderPath);
+        if (!stats.isDirectory()) continue;
 
-      if (!stats.isDirectory()) continue;
+        // Look for manifest.json in the latest version folder
+        const versionFolders = readdirSync(folderPath);
+        
+        // Sort version folders to get the latest one
+        const sortedVersions = versionFolders.sort().reverse();
+        
+        for (const versionFolder of sortedVersions) {
+          const manifestPath = join(folderPath, versionFolder, 'manifest.json');
 
-      // Look for manifest.json in the latest version folder
-      const versionFolders = require('fs').readdirSync(folderPath);
-      for (const versionFolder of versionFolders) {
-        const manifestPath = join(folderPath, versionFolder, 'manifest.json');
-
-        if (existsSync(manifestPath)) {
-          try {
-            const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-            if (manifest.name === 'DevTools Bridge' || manifest.name === 'Gravity') {
-              return folder;
+          if (existsSync(manifestPath)) {
+            try {
+              const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+              // Check for both possible names
+              if (manifest.name === 'DevTools Bridge' || manifest.name === 'Gravity') {
+                return folder;
+              }
+            } catch (e) {
+              // Skip invalid manifests
+              continue;
             }
-          } catch {
-            // Skip invalid manifests
           }
         }
+      } catch (e) {
+        // Skip folders that can't be read
+        continue;
       }
     }
 
@@ -253,16 +266,22 @@ export async function testWebSocketConnection(port: number = 9224): Promise<bool
     }, 3000);
 
     try {
-      const ws = require('ws');
-      const socket = new ws(`ws://localhost:${port}`);
+      // Dynamic import for ws module
+      import('ws').then((wsModule) => {
+        const WebSocket = wsModule.default;
+        const socket = new WebSocket(`ws://localhost:${port}`);
 
-      socket.on('open', () => {
-        clearTimeout(timeout);
-        socket.close();
-        resolve(true);
-      });
+        socket.on('open', () => {
+          clearTimeout(timeout);
+          socket.close();
+          resolve(true);
+        });
 
-      socket.on('error', () => {
+        socket.on('error', () => {
+          clearTimeout(timeout);
+          resolve(false);
+        });
+      }).catch(() => {
         clearTimeout(timeout);
         resolve(false);
       });

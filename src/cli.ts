@@ -4,11 +4,11 @@
  * Gravity CLI
  * 
  * Commands:
- * - gravity setup-extension    Extract and setup Chrome extension
- * - gravity setup-native-host  Setup native messaging host
- * - gravity test-connection    Test connection to extension
- * - gravity                    Start MCP server
- * - gravity --help             Show help
+ * - npx gravity-core setup-extension    Extract and setup Chrome extension
+ * - npx gravity-core setup-native-host  Setup native messaging host
+ * - npx gravity-core test-connection    Test connection to extension
+ * - npx gravity-core                    Start MCP server
+ * - npx gravity-core --help             Show help
  */
 
 import { Gravity } from './index.js';
@@ -51,7 +51,7 @@ if (command === 'setup-extension') {
   runMCPServer();
 } else {
   console.error(`❌ Unknown command: ${command}`);
-  console.error('Run "gravity --help" for usage information');
+  console.error('Run "npx gravity-core --help" for usage information');
   process.exit(1);
 }
 
@@ -63,20 +63,20 @@ function showHelp() {
 🌌 Gravity - AI-powered CSS layout diagnostics
 
 Usage:
-  gravity                      Start the MCP server
-  gravity setup-extension      Extract Chrome extension to ~/.gravity-extension
-  gravity setup-native-host    Setup native messaging host for Chrome
-  gravity test-connection      Test connection to extension
-  gravity --help               Show this help message
+  npx gravity-core                      Start the MCP server
+  npx gravity-core setup-extension      Extract Chrome extension to ~/.gravity-extension
+  npx gravity-core setup-native-host    Setup native messaging host for Chrome
+  npx gravity-core test-connection      Test connection to extension
+  npx gravity-core --help               Show this help message
 
 Setup Instructions:
-  1. Run: gravity setup-extension
-  2. Run: gravity setup-native-host
+  1. Run: npx gravity-core setup-extension
+  2. Run: npx gravity-core setup-native-host
   3. Open Chrome and go to: chrome://extensions
   4. Enable "Developer mode" (toggle in top right)
   5. Click "Load unpacked"
   6. Select the ~/.gravity-extension folder
-  7. Run: gravity test-connection
+  7. Run: npx gravity-core test-connection
   8. Configure your IDE with the MCP server
 
 Environment Variables:
@@ -117,7 +117,8 @@ async function handleSetupExtension() {
     }
 
     // Remove existing folder
-    require('fs').rmSync(targetDir, { recursive: true, force: true });
+    const { rmSync } = await import('fs');
+    rmSync(targetDir, { recursive: true, force: true });
   }
 
   try {
@@ -132,12 +133,12 @@ async function handleSetupExtension() {
   // Show next steps
   console.error('📋 Next Steps:');
   console.error('');
-  console.error('   1. Run: gravity setup-native-host');
+  console.error('   1. Run: npx gravity-core setup-native-host');
   console.error('   2. Open Chrome and go to: chrome://extensions');
   console.error('   3. Enable "Developer mode" (toggle in top right)');
   console.error('   4. Click "Load unpacked"');
   console.error(`   5. Select this folder: ${targetDir}`);
-  console.error('   6. Run: gravity test-connection');
+  console.error('   6. Run: npx gravity-core test-connection');
   console.error('');
   console.error('🎉 Then configure your IDE with the MCP server!');
 }
@@ -160,8 +161,15 @@ async function handleSetupNativeHost() {
 
   if (!extensionId) {
     console.error('❌ Could not find Gravity extension.');
-    console.error('   Please run: gravity setup-extension');
-    console.error('   Then load the extension in Chrome first.');
+    console.error('');
+    console.error('Make sure you have:');
+    console.error('1. Run: npx gravity-core setup-extension');
+    console.error('2. Opened Chrome and gone to: chrome://extensions');
+    console.error('3. Enabled "Developer mode" (toggle in top right)');
+    console.error('4. Clicked "Load unpacked"');
+    console.error('5. Selected the ~/.gravity-extension folder');
+    console.error('');
+    console.error('Then run this command again.');
     process.exit(1);
   }
 
@@ -190,7 +198,8 @@ async function handleSetupNativeHost() {
   }
 
   if (existsSync(targetHostDir)) {
-    require('fs').rmSync(targetHostDir, { recursive: true, force: true });
+    const { rmSync } = await import('fs');
+    rmSync(targetHostDir, { recursive: true, force: true });
   }
 
   try {
@@ -236,7 +245,7 @@ async function handleSetupNativeHost() {
   console.error('   2. Enable "Developer mode" (toggle in top right)');
   console.error('   3. Click "Load unpacked"');
   console.error(`   4. Select this folder: ${getGravityExtensionDir()}`);
-  console.error('   5. Run: gravity test-connection');
+  console.error('   5. Run: npx gravity-core test-connection');
 }
 
 /**
@@ -256,7 +265,7 @@ async function handleTestConnection() {
     console.error('   ✅ Registry key found');
   } else {
     console.error('   ❌ Registry key not found');
-    console.error('      Run: gravity setup-native-host');
+    console.error('      Run: npx gravity-core setup-native-host');
   }
 
   // Check 2: Manifest file exists
