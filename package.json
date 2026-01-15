@@ -1,6 +1,6 @@
 {
   "name": "gravity-core",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Gravity - AI-powered CSS layout diagnostics for any IDE. Connect your browser to get real-time layout issue detection.",
   "type": "module",
   "main": "./dist/index.js",
