@@ -1,0 +1,9 @@
+{
+  "name": "com.devtools.bridge",
+  "description": "Gravity DevTools Bridge - Native messaging host for Chrome extension",
+  "path": "PLACEHOLDER_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "PLACEHOLDER_EXTENSION_ID"
+  ]
+}

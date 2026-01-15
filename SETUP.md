@@ -1,55 +1,114 @@
-# Gravity - Complete Setup Guide
+# Gravity Setup Guide
 
-**Gravity** enables AI assistants (Kiro, Cursor, VSCode, etc.) to diagnose CSS layout issues in real browser tabs.
+Complete step-by-step guide to set up Gravity for your IDE.
 
-## 🎯 What It Does
+## Prerequisites
 
-When you ask an AI "why is my modal not showing?", Gravity:
-1. Connects to your browser via extension
-2. Inspects the actual DOM element
-3. Analyzes its position, styles, and visibility
-4. Returns specific issues and fixes
+- Node.js 16+ installed
+- Chrome or Edge browser
+- Administrator access (for Windows registry modification)
 
-## 📋 Prerequisites
+## Installation Steps
 
-- **Node.js 16+** - [Download](https://nodejs.org)
-- **Chrome or Edge browser** - Already have it? Great!
-- **Any IDE** - VSCode, Cursor, Kiro, Warp, or any tool with MCP support
-
-## 🚀 Installation (3 Steps)
-
-### Step 1: Install npm Package
+### Step 1: Install the Package
 
 ```bash
 npm install gravity-core
 ```
 
-### Step 2: Load Chrome Extension
+Or globally:
 
-1. Clone or download the extension folder from the repo
-2. Open Chrome → `chrome://extensions`
-3. Enable **"Developer mode"** (top right)
-4. Click **"Load unpacked"**
-5. Select the `extension/` folder
-6. ✅ Extension loaded!
+```bash
+npm install -g gravity-core
+```
 
-### Step 3: Connect Extension to Tab
+### Step 2: Extract Chrome Extension
 
-1. Open any website in Chrome/Edge
-2. Click the **Gravity** extension icon (top right)
-3. Click **"Connect to Tab"**
-4. Status turns **🟢 Green** = Connected!
+```bash
+gravity setup-extension
+```
 
-**The extension now runs a WebSocket server on port 9224** - the MCP server connects to it automatically!
+This creates `~/.gravity-extension/` with all extension files.
 
----
+**What it does:**
+- Copies extension files from the package
+- Creates the directory in your home folder
+- Prints the path for the next step
 
-## 💻 Configure Your IDE
+### Step 3: Setup Native Host (Windows Only)
 
-### VSCode
+```bash
+gravity setup-native-host
+```
 
-1. Open `.vscode/settings.json` (or create it)
-2. Add MCP server config:
+This command:
+
+1. **Auto-detects extension ID**
+   - Scans Chrome's extension directory
+   - Finds the Gravity extension by name
+   - No manual ID lookup needed
+
+2. **Asks for confirmation**
+   ```
+   ⚠️  Gravity needs to add a native-messaging registry entry. Proceed? (y/n)
+   ```
+   - Type `y` to proceed
+   - Type `n` to cancel
+
+3. **Copies native host files**
+   - Creates `~/.gravity-host/` directory
+   - Copies native messaging host files
+
+4. **Patches manifest**
+   - Inserts your extension ID
+   - Updates path to native host executable
+
+5. **Writes registry key**
+   - Adds entry to Windows registry
+   - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge`
+
+6. **Optionally restarts Chrome**
+   ```
+   ⚠️  Chrome is currently running. Restart Chrome for changes to take effect? (y/n)
+   ```
+   - Type `y` to restart Chrome
+   - Type `n` to restart manually later
+
+### Step 4: Load Extension in Chrome
+
+1. Open Chrome and go to `chrome://extensions`
+2. Enable "Developer mode" (toggle in top right corner)
+3. Click "Load unpacked"
+4. Select the `~/.gravity-extension` folder
+5. The Gravity extension should now appear in your extensions list
+
+### Step 5: Test Connection
+
+```bash
+gravity test-connection
+```
+
+This verifies everything is working:
+
+```
+✅ Registry key exists
+✅ Manifest file exists
+✅ Manifest valid
+✅ Extension ID configured: chrome-extension://xxxxx/
+✅ Native host executable found
+✅ WebSocket connection successful
+
+🎉 Gravity is ready! All checks passed.
+```
+
+If any checks fail, see the Troubleshooting section below.
+
+### Step 6: Configure Your IDE
+
+#### VSCode
+
+1. Open settings: `Ctrl+Shift+P` → "Preferences: Open User Settings (JSON)"
+2. Add to your settings:
 
 ```json
 {
@@ -64,28 +123,15 @@ npm install gravity-core
 ```
 
 3. Restart VSCode
-4. Open any HTML/CSS file
-5. Ask the AI: "Diagnose the #modal element"
 
-### Cursor
+#### Cursor
 
-Same as VSCode - add to `.cursor/settings.json`:
+Same as VSCode - add to your MCP settings.
 
-```json
-{
-  "mcpServers": {
-    "gravity": {
-      "command": "npx",
-      "args": ["gravity-core"],
-      "disabled": false
-    }
-  }
-}
-```
+#### Kiro
 
-### Kiro
-
-Add to `.kiro/settings/mcp.json`:
+1. Open Kiro settings
+2. Add to MCP configuration:
 
 ```json
 {
@@ -99,360 +145,161 @@ Add to `.kiro/settings/mcp.json`:
 }
 ```
 
-Restart Kiro. Now ask the AI:
-- "Check if browser is connected"
-- "Diagnose the #modal element"
-- "Highlight the .button element"
+#### Other IDEs with MCP Support
 
-### Warp
+Add the same configuration to your IDE's MCP settings file.
 
-Add to `.warp/config.json`:
+### Step 7: Start Using Gravity
 
-```json
-{
-  "mcpServers": {
-    "gravity": {
-      "command": "npx",
-      "args": ["gravity-core"],
-      "disabled": false
-    }
-  }
-}
+1. Open a web page in Chrome
+2. Click the Gravity extension icon in your toolbar
+3. Click "Connect to Tab"
+4. Status should turn green
+5. In your IDE, ask your AI assistant:
+   - "Diagnose the #modal element"
+   - "Why is the .button not showing?"
+   - "Check if the browser is connected"
+
+## File Locations
+
+Gravity stores files in your home directory:
+
+- `~/.gravity-extension/` - Chrome extension files
+- `~/.gravity-host/` - Native messaging host files
+- `~/.gravity-host/manifest.json` - Native host configuration
+
+## Environment Variables
+
+You can customize Gravity's behavior with environment variables:
+
+```bash
+# Change WebSocket port (default: 9224)
+GRAVITY_PORT=9225 gravity
+
+# Change connection timeout (default: 10000ms)
+GRAVITY_TIMEOUT=20000 gravity
 ```
 
-### Any IDE with MCP Support
+## Troubleshooting
 
-Add this to your IDE's MCP configuration:
+### "Could not find Gravity extension"
 
-```json
-{
-  "mcpServers": {
-    "gravity": {
-      "command": "npx",
-      "args": ["gravity-core"],
-      "disabled": false
-    }
-  }
-}
-```
+**Problem:** `gravity setup-native-host` can't find your extension.
 
----
+**Solutions:**
+1. Make sure you ran `gravity setup-extension` first
+2. Load the extension in Chrome (`chrome://extensions` → "Load unpacked")
+3. Try running `gravity setup-native-host` again
 
-## 🔄 How It Works
+### "Failed to write registry key"
 
-```
-Your IDE (VSCode, Cursor, Kiro, etc.)
-    ↓
-MCP Server (gravity-core)
-    ↓
-WebSocket Connection (port 9224)
-    ↓
-Chrome Extension (running WebSocket server)
-    ↓
-Chrome Debugger API
-    ↓
-Browser Tab (DOM, CSS, Layout data)
-```
+**Problem:** Registry modification failed.
 
-**Flow:**
-1. You ask AI to diagnose an element
-2. IDE sends request to MCP server
-3. MCP server connects to extension via WebSocket on port 9224
-4. Extension uses Chrome Debugger API to query browser
-5. Results flow back to your IDE
-6. AI shows you the issues and fixes
+**Solutions:**
+1. Run Command Prompt as Administrator
+2. Run `gravity setup-native-host` again
+3. Check that Chrome is installed in the default location
+4. Verify you have permission to modify `HKCU\Software\Google\Chrome`
 
----
+### "Registry key not found" (test-connection)
 
-## 📊 Example Output
+**Problem:** Registry key doesn't exist after setup.
 
-```json
-{
-  "element": "#modal",
-  "found": true,
-  "issues": [
-    {
-      "type": "offscreen-right",
-      "severity": "high",
-      "message": "Element extends 50px beyond right edge of viewport",
-      "suggestion": "Add max-width: 100% or use overflow: hidden on parent"
-    }
-  ],
-  "position": {
-    "left": 100,
-    "top": 50,
-    "width": 500,
-    "height": 300
-  },
-  "viewport": {
-    "width": 1920,
-    "height": 1080
-  }
-}
-```
+**Solutions:**
+1. Run `gravity setup-native-host` again
+2. Make sure you confirmed the registry modification
+3. Check registry manually:
+   ```
+   reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge"
+   ```
 
----
+### "WebSocket connection failed" (test-connection)
 
-## 🎯 Common Workflows
+**Problem:** Can't connect to the MCP server.
 
-### Workflow 1: Fix Offscreen Element (VSCode)
+**Solutions:**
+1. Start the MCP server: `gravity`
+2. Check port 9224 is not blocked by firewall
+3. Try a different port: `GRAVITY_PORT=9225 gravity`
+4. Check that the extension is loaded and connected
 
-1. **Browser**: Open page with broken layout
-2. **Extension**: Click icon → "Connect to Tab" (🟢 Green)
-3. **VSCode**: Open CSS file
-4. **VSCode**: Ask AI: "Diagnose the .modal element"
-5. **AI**: Shows "Element extends 50px beyond right edge"
-6. **You**: Add `max-width: 100%` to CSS
-7. **Browser**: Refreshes automatically
-8. **AI**: Diagnose again → ✅ Fixed!
+### "Extension not loaded" in Chrome
 
-### Workflow 2: Debug Hidden Element (Kiro)
+**Problem:** Extension doesn't appear in `chrome://extensions`.
 
-1. **Browser**: Open page with hidden element
-2. **Extension**: Click icon → "Connect to Tab" (🟢 Green)
-3. **Kiro**: Ask AI: "Why is the #button not showing?"
-4. **AI**: "The element has display: none"
-5. **You**: Change CSS to `display: block`
-6. **AI**: Diagnose again → ✅ Visible!
+**Solutions:**
+1. Make sure you ran `gravity setup-extension`
+2. Go to `chrome://extensions`
+3. Enable "Developer mode" (toggle in top right)
+4. Click "Load unpacked"
+5. Select `~/.gravity-extension` folder
+6. Refresh the page
 
-### Workflow 3: Check Multiple Elements (Cursor)
+### "Element not found" in diagnostics
 
-1. **Browser**: Open page
-2. **Extension**: Connect to tab
-3. **Cursor**: Ask AI: "Check these elements: #modal, .button, .header"
-4. **AI**: Shows issues for all three
-5. **You**: Fix them one by one
+**Problem:** Gravity can't find the element you're asking about.
 
----
+**Solutions:**
+1. Check the CSS selector is correct
+2. Make sure the element exists on the page
+3. Try a simpler selector (e.g., `div` instead of `#modal`)
+4. Make sure the extension is connected (green status)
 
-## 🔧 Configuration
+### Chrome keeps asking to restart
 
-### Custom Port
+**Problem:** Chrome needs to restart for changes to take effect.
 
-If port 9224 is in use, you can configure a different port:
-
-1. Edit the extension's `background.js`:
-```javascript
-const WEBSOCKET_PORT = 9225; // Change from 9224
-```
-
-2. Update your IDE config with environment variable:
-```json
-{
-  "mcpServers": {
-    "gravity": {
-      "command": "npx",
-      "args": ["gravity-core"],
-      "env": {
-        "GRAVITY_PORT": "9225"
-      },
-      "disabled": false
-    }
-  }
-}
-```
-
-### Timeout
-
-In your IDE config:
-
-```json
-{
-  "mcpServers": {
-    "gravity": {
-      "command": "npx",
-      "args": ["gravity-core"],
-      "env": {
-        "GRAVITY_TIMEOUT": "20000"
-      },
-      "disabled": false
-    }
-  }
-}
-```
-
----
-
-## 🐛 Troubleshooting
-
-### "Not connected to browser"
-
-**Problem**: Error says "Not connected"
-
-**Solution**:
-1. Make sure Chrome/Edge is open
-2. Click extension icon → "Connect to Tab"
-3. Status should turn green
-4. Try again in your IDE
-
-### "Extension not loaded"
-
-**Problem**: Extension icon doesn't appear
-
-**Solution**:
-1. Go to `chrome://extensions`
-2. Enable "Developer mode" (top right)
-3. Click "Load unpacked"
-4. Select the `extension/` folder
-5. Refresh the page
+**Solutions:**
+1. Close Chrome completely
+2. Restart Chrome manually
+3. Or answer `y` when prompted during setup
 
 ### "Port 9224 already in use"
 
-**Problem**: Error "Port 9224 already in use"
+**Problem:** Another application is using port 9224.
 
-**Solution**:
-1. Edit extension's `background.js`
-2. Change `WEBSOCKET_PORT` to 9225
-3. Update IDE config with `DEVTOOLS_BRIDGE_PORT: 9225`
-4. Reload extension
+**Solutions:**
+1. Use a different port: `GRAVITY_PORT=9225 gravity`
+2. Update your IDE config to use the new port
+3. Or stop the other application using port 9224
 
-### "Element not found"
+## Uninstalling
 
-**Problem**: Error "Element not found: #modal"
+To remove Gravity:
 
-**Solution**:
-1. Check selector is correct
-2. Make sure element exists in page
-3. Try simpler selector: `div` instead of `#modal`
-4. Check browser console for errors
+1. Remove the npm package:
+   ```bash
+   npm uninstall gravity-core
+   ```
 
-### "Connection timeout"
+2. Remove the extension from Chrome:
+   - Go to `chrome://extensions`
+   - Find Gravity and click "Remove"
 
-**Problem**: Error "Connection timeout"
+3. Delete the local files (optional):
+   ```bash
+   rm -r ~/.gravity-extension
+   rm -r ~/.gravity-host
+   ```
 
-**Solution**:
-1. Make sure extension is connected (green status)
-2. Check firewall isn't blocking port 9224
-3. Restart browser
-4. Reload extension
+4. Remove registry entry (optional, Windows):
+   ```
+   reg delete "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.devtools.bridge" /f
+   ```
 
----
+## Getting Help
 
-## 📚 API Reference
+- Check the [README](./README.md) for quick start
+- Review [Architecture](./ARCHITECTURE.md) for technical details
+- Open an issue on [GitHub](https://github.com/DharuNamikaze/Gravity-Package/issues)
 
-### Gravity
+## Next Steps
 
-```typescript
-import { Gravity } from 'gravity-core';
+Once Gravity is set up:
 
-const bridge = new Gravity(options);
-```
+1. **Configure your IDE** - Add MCP server configuration
+2. **Load the extension** - Go to `chrome://extensions` and load unpacked
+3. **Connect to a tab** - Click extension icon and "Connect to Tab"
+4. **Start diagnosing** - Ask your AI about layout issues
 
-#### Options
-
-```typescript
-{
-  port?: number;           // Default: 9224
-  timeout?: number;        // Default: 10000 (ms)
-  autoReconnect?: boolean; // Default: true
-}
-```
-
-#### Methods
-
-##### `connectBrowser(port?: number): Promise<void>`
-
-Connect to browser.
-
-```javascript
-await bridge.connectBrowser();
-```
-
-##### `disconnectBrowser(): Promise<void>`
-
-Disconnect from browser.
-
-```javascript
-await bridge.disconnectBrowser();
-```
-
-##### `isConnected(): boolean`
-
-Check if connected.
-
-```javascript
-if (bridge.isConnected()) {
-  console.log('Connected!');
-}
-```
-
-##### `diagnoseLayout(selector: string): Promise<DiagnosticResult>`
-
-Diagnose layout issues.
-
-```javascript
-const result = await bridge.diagnoseLayout('#modal');
-console.log(result.issues);
-```
-
-#### Events
-
-```javascript
-bridge.on('connected', () => {
-  console.log('Connected to browser!');
-});
-
-bridge.on('disconnected', () => {
-  console.log('Disconnected from browser');
-});
-
-bridge.on('error', (error) => {
-  console.error('Error:', error);
-});
-```
-
----
-
-## 🎓 Detected Issues
-
-Gravity detects:
-
-| Issue | Severity | What It Means |
-|-------|----------|--------------|
-| `offscreen-right` | 🔴 High | Element extends beyond right edge |
-| `offscreen-left` | 🔴 High | Element extends beyond left edge |
-| `offscreen-top` | 🔴 High | Element extends beyond top edge |
-| `offscreen-bottom` | 🟡 Medium | Element extends beyond bottom edge |
-| `hidden-display` | 🔴 High | `display: none` |
-| `hidden-visibility` | 🔴 High | `visibility: hidden` |
-| `hidden-opacity` | 🔴 High | `opacity: 0` |
-| `low-opacity` | 🟡 Medium | `opacity < 0.1` |
-| `modal-no-zindex` | 🟡 Medium | Positioned element without z-index |
-| `modal-low-zindex` | 🟢 Low | `z-index < 100` |
-| `overflow-hidden` | 🟢 Low | May clip content |
-
----
-
-## 🚀 Next Steps
-
-1. **Install package**: `npm install gravity-core`
-2. **Load extension**: `chrome://extensions` → Load unpacked → select `extension/` folder
-3. **Connect browser**: Click extension → "Connect to Tab"
-4. **Configure IDE**: Add MCP server config (see above)
-5. **Start diagnosing**: Ask your AI to diagnose elements!
-
----
-
-## 📞 Support
-
-- **GitHub Issues**: [Report bugs](https://github.com/gravity/core/issues)
-- **Documentation**: [Full docs](https://gravity.dev)
-- **Examples**: Check `examples/` folder in repo
-
----
-
-## 🎉 You're Ready!
-
-You now have everything to diagnose layouts in real-time. Start with:
-
-```bash
-npm install gravity-core
-```
-
-Then:
-1. Load extension in Chrome
-2. Connect to tab
-3. Add MCP config to your IDE
-4. Ask your AI to diagnose elements!
-
-Happy debugging! 🚀
+Happy debugging! 🎉
