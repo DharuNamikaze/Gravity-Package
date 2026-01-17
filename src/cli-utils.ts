@@ -40,7 +40,77 @@ export function getGravityHostDir(): string {
 }
 
 /**
- * Get Chrome extensions directory
+ * Get all Chrome profile directories
+ */
+export function getChromeProfileDirs(): string[] {
+  if (platform() !== 'win32') {
+    throw new Error('Chrome extension detection only supported on Windows');
+  }
+
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    throw new Error('LOCALAPPDATA environment variable not found');
+  }
+
+  const chromeUserDataDir = join(localAppData, 'Google', 'Chrome', 'User Data');
+  const profileDirs: string[] = [];
+
+  // Scan for all profile directories (Default, Profile 1, Profile 2, etc.)
+  if (existsSync(chromeUserDataDir)) {
+    const items = readdirSync(chromeUserDataDir);
+    for (const item of items) {
+      const itemPath = join(chromeUserDataDir, item);
+      try {
+        const stats = statSync(itemPath);
+        if (stats.isDirectory() && (item === 'Default' || item.match(/^Profile \d+$/))) {
+          profileDirs.push(itemPath);
+        }
+      } catch (e) {
+        // Skip unreadable directories
+      }
+    }
+  }
+
+  return profileDirs;
+}
+
+/**
+ * Get all Brave profile directories
+ */
+export function getBraveProfileDirs(): string[] {
+  if (platform() !== 'win32') {
+    throw new Error('Brave extension detection only supported on Windows');
+  }
+
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    throw new Error('LOCALAPPDATA environment variable not found');
+  }
+
+  const braveUserDataDir = join(localAppData, 'BraveSoftware', 'Brave-Browser', 'User Data');
+  const profileDirs: string[] = [];
+
+  // Scan for all profile directories (Default, Profile 1, Profile 2, etc.)
+  if (existsSync(braveUserDataDir)) {
+    const items = readdirSync(braveUserDataDir);
+    for (const item of items) {
+      const itemPath = join(braveUserDataDir, item);
+      try {
+        const stats = statSync(itemPath);
+        if (stats.isDirectory() && (item === 'Default' || item.match(/^Profile \d+$/))) {
+          profileDirs.push(itemPath);
+        }
+      } catch (e) {
+        // Skip unreadable directories
+      }
+    }
+  }
+
+  return profileDirs;
+}
+
+/**
+ * Get Chrome extensions directory (deprecated - use getChromeProfileDirs instead)
  */
 export function getChromeExtensionsDir(): string {
   if (platform() !== 'win32') {
@@ -56,73 +126,192 @@ export function getChromeExtensionsDir(): string {
 }
 
 /**
- * Detect Gravity extension ID by scanning Chrome extensions directory
- * Falls back to using a default ID if extension not yet loaded in Chrome
+ * Get all Chrome profile directories
+ */
+export function getAllChromeProfileDirs(): string[] {
+  if (platform() !== 'win32') {
+    return [];
+  }
+
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    return [];
+  }
+
+  const chromeUserDataDir = join(localAppData, 'Google', 'Chrome', 'User Data');
+  const profiles: string[] = [];
+
+  if (!existsSync(chromeUserDataDir)) {
+    return profiles;
+  }
+
+  try {
+    const folders = readdirSync(chromeUserDataDir);
+    
+    for (const folder of folders) {
+      // Chrome uses "Default", "Profile 1", "Profile 2", etc.
+      if (folder === 'Default' || folder.match(/^Profile \d+$/)) {
+        const extensionsDir = join(chromeUserDataDir, folder, 'Extensions');
+        if (existsSync(extensionsDir)) {
+          profiles.push(extensionsDir);
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+
+  return profiles;
+}
+
+/**
+ * Get all Brave profile directories
+ */
+export function getAllBraveProfileDirs(): string[] {
+  if (platform() !== 'win32') {
+    return [];
+  }
+
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    return [];
+  }
+
+  const braveUserDataDir = join(localAppData, 'BraveSoftware', 'Brave-Browser', 'User Data');
+  const profiles: string[] = [];
+
+  if (!existsSync(braveUserDataDir)) {
+    return profiles;
+  }
+
+  try {
+    const folders = readdirSync(braveUserDataDir);
+    
+    for (const folder of folders) {
+      // Brave uses "Default", "Profile 1", "Profile 2", etc.
+      if (folder === 'Default' || folder.match(/^Profile \d+$/)) {
+        const extensionsDir = join(braveUserDataDir, folder, 'Extensions');
+        if (existsSync(extensionsDir)) {
+          profiles.push(extensionsDir);
+        }
+      }
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+
+  return profiles;
+}
+
+/**
+ * Detect Gravity extension ID by scanning Chrome and Brave extensions directories
+ * Scans all profiles to find the extension
  */
 export function detectGravityExtensionId(): string | null {
   try {
-    const extensionsDir = getChromeExtensionsDir();
-    console.error(`🔍 Scanning extensions directory: ${extensionsDir}`);
+    // Try Chrome first
+    console.error(`🔍 Scanning Chrome profiles for Gravity extension...`);
+    const chromeProfileDirs = getChromeProfileDirs();
+    console.error(`   Found ${chromeProfileDirs.length} Chrome profile(s)`);
 
-    if (!existsSync(extensionsDir)) {
-      console.error(`❌ Extensions directory does not exist`);
-      return null;
+    for (const profileDir of chromeProfileDirs) {
+      const extensionsDir = join(profileDir, 'Extensions');
+      console.error(`   📁 Checking: ${profileDir}`);
+
+      if (!existsSync(extensionsDir)) {
+        console.error(`      ⏭️  Extensions directory not found`);
+        continue;
+      }
+
+      const result = scanExtensionsDir(extensionsDir);
+      if (result) {
+        console.error(`   ✅ Found in Chrome profile!`);
+        return result;
+      }
     }
 
+    // Try Brave
+    console.error(`🔍 Scanning Brave profiles for Gravity extension...`);
+    const braveProfileDirs = getBraveProfileDirs();
+    console.error(`   Found ${braveProfileDirs.length} Brave profile(s)`);
+
+    for (const profileDir of braveProfileDirs) {
+      const extensionsDir = join(profileDir, 'Extensions');
+      console.error(`   � Checking: ${profileDir}`);
+
+      if (!existsSync(extensionsDir)) {
+        console.error(`      ⏭️  Extensions directory not found`);
+        continue;
+      }
+
+      const result = scanExtensionsDir(extensionsDir);
+      if (result) {
+        console.error(`   ✅ Found in Brave profile!`);
+        return result;
+      }
+    }
+
+    console.error(`❌ Gravity extension not found in any Chrome or Brave profile`);
+    return null;
+  } catch (error: any) {
+    console.error(`❌ Error scanning extensions: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Scan a single extensions directory for Gravity extension
+ */
+function scanExtensionsDir(extensionsDir: string): string | null {
+  try {
     const extensionFolders = readdirSync(extensionsDir);
-    console.error(`📁 Found ${extensionFolders.length} extension folders`);
+    console.error(`      📦 Found ${extensionFolders.length} extension(s)`);
 
     for (const folder of extensionFolders) {
       const folderPath = join(extensionsDir, folder);
-      
+
       try {
         const stats = statSync(folderPath);
         if (!stats.isDirectory()) {
-          console.error(`   ⏭️  Skipping (not a directory): ${folder}`);
           continue;
         }
 
         // Look for manifest.json in the latest version folder
         const versionFolders = readdirSync(folderPath);
-        
+
         if (versionFolders.length === 0) {
-          console.error(`   ⏭️  Skipping (no version folders): ${folder}`);
           continue;
         }
 
         // Sort version folders to get the latest one
         const sortedVersions = versionFolders.sort().reverse();
-        console.error(`   📦 Extension ID: ${folder}, versions: ${sortedVersions.slice(0, 3).join(', ')}${sortedVersions.length > 3 ? '...' : ''}`);
-        
+
         for (const versionFolder of sortedVersions) {
           const manifestPath = join(folderPath, versionFolder, 'manifest.json');
 
           if (existsSync(manifestPath)) {
             try {
               const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-              console.error(`      📄 Manifest found: name="${manifest.name}"`);
-              
-              // Check for both possible names
+              console.error(`         - ${manifest.name || '(no name)'}`);
+
               if (manifest.name === 'Gravity') {
-                console.error(`      ✅ Found Gravity extension! ID: ${folder}`);
+                console.error(`         ✅ Found Gravity! ID: ${folder}`);
                 return folder;
               }
             } catch (e) {
-              console.error(`      ⚠️  Invalid manifest JSON`);
+              // Skip invalid manifests
               continue;
             }
           }
         }
       } catch (e) {
-        console.error(`   ⚠️  Error reading folder: ${folder}`);
+        // Skip folders that can't be read
         continue;
       }
     }
 
-    console.error(`❌ Gravity extension not found in Chrome extensions directory`);
     return null;
-  } catch (error: any) {
-    console.error(`❌ Error scanning extensions: ${error.message}`);
+  } catch (error) {
     return null;
   }
 }

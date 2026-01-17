@@ -5,7 +5,8 @@
   "description": "Gravity - Browser DevTools integration for MCP server",
   "permissions": [
     "debugger",
-    "tabs"
+    "tabs",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "<all_urls>"
