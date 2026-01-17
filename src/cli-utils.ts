@@ -2,7 +2,7 @@
  * CLI Utilities for Gravity setup and diagnostics
  */
 
-import { existsSync, readFileSync, writeFileSync, cpSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, cpSync, mkdirSync, readdirSync, statSync } from 'fs';
 import { join, resolve, win32 } from 'path';
 import { homedir, platform } from 'os';
 import { execSync, spawnSync } from 'child_process';
@@ -62,26 +62,37 @@ export function getChromeExtensionsDir(): string {
 export function detectGravityExtensionId(): string | null {
   try {
     const extensionsDir = getChromeExtensionsDir();
+    console.error(`🔍 Scanning extensions directory: ${extensionsDir}`);
 
     if (!existsSync(extensionsDir)) {
+      console.error(`❌ Extensions directory does not exist`);
       return null;
     }
 
-    const { readdirSync, statSync } = require('fs');
     const extensionFolders = readdirSync(extensionsDir);
+    console.error(`📁 Found ${extensionFolders.length} extension folders`);
 
     for (const folder of extensionFolders) {
       const folderPath = join(extensionsDir, folder);
       
       try {
         const stats = statSync(folderPath);
-        if (!stats.isDirectory()) continue;
+        if (!stats.isDirectory()) {
+          console.error(`   ⏭️  Skipping (not a directory): ${folder}`);
+          continue;
+        }
 
         // Look for manifest.json in the latest version folder
         const versionFolders = readdirSync(folderPath);
         
+        if (versionFolders.length === 0) {
+          console.error(`   ⏭️  Skipping (no version folders): ${folder}`);
+          continue;
+        }
+
         // Sort version folders to get the latest one
         const sortedVersions = versionFolders.sort().reverse();
+        console.error(`   📦 Extension ID: ${folder}, versions: ${sortedVersions.slice(0, 3).join(', ')}${sortedVersions.length > 3 ? '...' : ''}`);
         
         for (const versionFolder of sortedVersions) {
           const manifestPath = join(folderPath, versionFolder, 'manifest.json');
@@ -89,24 +100,29 @@ export function detectGravityExtensionId(): string | null {
           if (existsSync(manifestPath)) {
             try {
               const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+              console.error(`      📄 Manifest found: name="${manifest.name}"`);
+              
               // Check for both possible names
               if (manifest.name === 'Gravity') {
+                console.error(`      ✅ Found Gravity extension! ID: ${folder}`);
                 return folder;
               }
             } catch (e) {
-              // Skip invalid manifests
+              console.error(`      ⚠️  Invalid manifest JSON`);
               continue;
             }
           }
         }
       } catch (e) {
-        // Skip folders that can't be read
+        console.error(`   ⚠️  Error reading folder: ${folder}`);
         continue;
       }
     }
 
+    console.error(`❌ Gravity extension not found in Chrome extensions directory`);
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`❌ Error scanning extensions: ${error.message}`);
     return null;
   }
 }

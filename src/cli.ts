@@ -354,7 +354,8 @@ async function runMCPServer() {
 
   // Run mcp-server.js directly as a subprocess
   // This ensures strict JSON-RPC protocol compliance with no CLI output
-  const mcpServer = spawn('node', [require.resolve('./mcp-server.js')], {
+  const mcpServerPath = join(__dirname, 'mcp-server.js');
+  const mcpServer = spawn('node', [mcpServerPath], {
     stdio: ['inherit', 'inherit', 'inherit'],
     env: process.env,
   });
