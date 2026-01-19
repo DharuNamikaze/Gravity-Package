@@ -27,6 +27,7 @@ import {
   validateManifest,
   nativeHostExists,
   testWebSocketConnection,
+  startRegistrationServer,
 } from './cli-utils.js';
 import { existsSync, cpSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
@@ -157,23 +158,31 @@ async function handleSetupNativeHost() {
     process.exit(1);
   }
 
-  // Step 1: Try to auto-detect extension ID
+  // Step 1: Try to auto-detect extension ID via registration server
   console.error('🔍 Detecting Gravity extension ID...\n');
   
-  // First, try to query the extension directly (most reliable for unpacked extensions)
-  console.error('   Attempting automatic detection via extension...');
-  let extensionId = await queryExtensionForId();
+  console.error('   Starting registration server...');
+  console.error('   The extension will automatically register when loaded.\n');
   
-  if (extensionId) {
-    console.error(`   ✅ Auto-detected extension ID: ${extensionId}\n`);
+  const registrationResult = await startRegistrationServer(60000);
+  
+  let extensionId: string | null = null;
+  let browser: string = 'chrome';
+  
+  if (registrationResult) {
+    extensionId = registrationResult.extensionId;
+    browser = registrationResult.browser;
+    console.error(`\n✅ Extension registered successfully!`);
+    console.error(`   Extension ID: ${extensionId}`);
+    console.error(`   Browser: ${browser}\n`);
   } else {
-    console.error('   ⏭️  Auto-detection failed, trying filesystem scan...');
+    console.error('\n⏭️  Auto-registration timed out, trying filesystem scan...');
     
     // Fallback: scan installed extensions
     extensionId = detectGravityExtensionId();
     
     if (extensionId) {
-      console.error(`   ✅ Found extension ID: ${extensionId}\n`);
+      console.error(`   ✅ Found extension ID via filesystem: ${extensionId}\n`);
     } else {
       console.error('\n⚠️  Could not auto-detect extension ID.');
       console.error('This is normal for unpacked (dev mode) extensions.\n');
@@ -204,6 +213,7 @@ async function handleSetupNativeHost() {
         console.error('3. Enabled "Developer mode" (toggle in top right)');
         console.error('4. Clicked "Load unpacked"');
         console.error('5. Selected the ~/.gravity-extension folder');
+        console.error('6. Clicked the Gravity extension icon and clicked "Register with CLI"');
         console.error('');
         console.error('Then run this command again.');
         process.exit(1);

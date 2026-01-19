@@ -662,3 +662,131 @@ export async function queryExtensionForId(port: number = 9224): Promise<string |
     return null;
   }
 }
+
+/**
+ * Start HTTP registration server to receive extension ID from the extension
+ * Returns a promise that resolves with the extension ID when received
+ */
+export async function startRegistrationServer(timeoutMs: number = 60000): Promise<{ extensionId: string; browser: string } | null> {
+  const http = await import('http');
+  
+  // Try multiple ports in case one is in use
+  const ports = [39224, 39225, 39226, 39227, 39228];
+  let server: any = null;
+  let selectedPort: number = 0;
+  
+  return new Promise((resolve) => {
+    let resolved = false;
+    let timeoutHandle: NodeJS.Timeout;
+    
+    const cleanup = () => {
+      if (server) {
+        server.close();
+        server = null;
+      }
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
+    };
+    
+    const resolveOnce = (value: { extensionId: string; browser: string } | null) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(value);
+      }
+    };
+    
+    // Set timeout
+    timeoutHandle = setTimeout(() => {
+      console.error('⏱️  Registration timeout - no extension registered within', timeoutMs / 1000, 'seconds');
+      resolveOnce(null);
+    }, timeoutMs);
+    
+    // Try to start server on available port
+    const tryPort = (portIndex: number) => {
+      if (portIndex >= ports.length) {
+        console.error('❌ Could not start registration server on any port');
+        resolveOnce(null);
+        return;
+      }
+      
+      const port = ports[portIndex];
+      
+      server = http.createServer((req, res) => {
+        // Enable CORS for localhost
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        
+        // Handle preflight
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200);
+          res.end();
+          return;
+        }
+        
+        // Only accept POST to /register
+        if (req.method === 'POST' && req.url === '/register') {
+          let body = '';
+          
+          req.on('data', (chunk) => {
+            body += chunk.toString();
+          });
+          
+          req.on('end', () => {
+            try {
+              const data = JSON.parse(body);
+              
+              if (!data.extensionId || !data.browser) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: 'Missing extensionId or browser' }));
+                return;
+              }
+              
+              console.error('✅ Extension registered:', data.extensionId, `(${data.browser})`);
+              
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true, message: 'Registration successful' }));
+              
+              // Resolve with the extension ID
+              resolveOnce({ extensionId: data.extensionId, browser: data.browser });
+              
+            } catch (error: any) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: false, error: 'Invalid JSON' }));
+            }
+          });
+        } else {
+          res.writeHead(404);
+          res.end('Not found');
+        }
+      });
+      
+      server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`Port ${port} in use, trying next port...`);
+          tryPort(portIndex + 1);
+        } else {
+          console.error('Server error:', err);
+          resolveOnce(null);
+        }
+      });
+      
+      server.listen(port, '127.0.0.1', () => {
+        selectedPort = port;
+        console.error(`\n🌐 Registration server listening on http://127.0.0.1:${port}`);
+        console.error('📋 Waiting for extension to register...');
+        console.error('');
+        console.error('   If the extension is already loaded in Chrome:');
+        console.error('   1. Click the Gravity extension icon');
+        console.error('   2. Click "Register with CLI"');
+        console.error('');
+        console.error('   Or reload the extension to trigger automatic registration.');
+        console.error('');
+      });
+    };
+    
+    tryPort(0);
+  });
+}
