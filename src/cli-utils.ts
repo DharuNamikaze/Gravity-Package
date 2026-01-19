@@ -266,52 +266,81 @@ function scanExtensionsDir(extensionsDir: string): string | null {
   try {
     const extensionFolders = readdirSync(extensionsDir);
     console.error(`      📦 Found ${extensionFolders.length} extension(s)`);
+    console.error(`      [DEBUG] Extension IDs: ${extensionFolders.join(', ')}`);
 
     for (const folder of extensionFolders) {
       const folderPath = join(extensionsDir, folder);
+      console.error(`         [DEBUG] Checking ID: ${folder}`);
 
       try {
         const stats = statSync(folderPath);
         if (!stats.isDirectory()) {
+          console.error(`         [DEBUG] Not a directory`);
           continue;
         }
 
         // Look for manifest.json in the latest version folder
         const versionFolders = readdirSync(folderPath);
+        console.error(`         [DEBUG] Versions: ${versionFolders.join(', ')}`);
 
         if (versionFolders.length === 0) {
+          console.error(`         [DEBUG] No versions found`);
           continue;
         }
 
         // Sort version folders to get the latest one
         const sortedVersions = versionFolders.sort().reverse();
+        const latestVersion = sortedVersions[0];
+        console.error(`         [DEBUG] Latest: ${latestVersion}`);
 
-        for (const versionFolder of sortedVersions) {
-          const manifestPath = join(folderPath, versionFolder, 'manifest.json');
+        const manifestPath = join(folderPath, latestVersion, 'manifest.json');
+        console.error(`         [DEBUG] Manifest: ${manifestPath}`);
 
-          if (existsSync(manifestPath)) {
-            try {
-              const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-              console.error(`         - ${manifest.name || '(no name)'}`);
+        if (existsSync(manifestPath)) {
+          try {
+            const manifestContent = readFileSync(manifestPath, 'utf-8');
+            const manifest = JSON.parse(manifestContent);
+            const name = manifest.name || '(no name)';
+            console.error(`         - ${name}`);
+            console.error(`         [DEBUG] name="${manifest.name}" type=${typeof manifest.name}`);
 
-              if (manifest.name === 'Gravity') {
-                console.error(`         ✅ Found Gravity! ID: ${folder}`);
+            // Check for exact match
+            if (manifest.name === 'Gravity') {
+              console.error(`         ✅ FOUND! ID: ${folder}`);
+              return folder;
+            }
+
+            // Fallback: check if description or other fields indicate Gravity
+            if (manifest.description && manifest.description.includes('Gravity')) {
+              console.error(`         ✅ FOUND by description! ID: ${folder}`);
+              return folder;
+            }
+
+            // Fallback: check for background.js (Gravity-specific)
+            if (manifest.background && manifest.background.service_worker === 'background.js') {
+              console.error(`         [DEBUG] Has background.js service worker - could be Gravity`);
+              // Check if it has debugger permission (Gravity-specific)
+              if (manifest.permissions && manifest.permissions.includes('debugger')) {
+                console.error(`         ✅ FOUND by debugger permission! ID: ${folder}`);
                 return folder;
               }
-            } catch (e) {
-              // Skip invalid manifests
-              continue;
             }
+          } catch (e: any) {
+            console.error(`         [DEBUG] Parse error: ${e.message}`);
+            continue;
           }
+        } else {
+          console.error(`         [DEBUG] Manifest not found`);
         }
-      } catch (e) {
-        // Skip folders that can't be read
+      } catch (e: any) {
+        console.error(`         [DEBUG] Folder error: ${e.message}`);
         continue;
       }
     }
 
     return null;
-  } catch (error) {
+  } catch (error: any) {
+    console.error(`      [DEBUG] Scan error: ${error.message}`);
     return null;
   }
 }
@@ -495,4 +524,110 @@ export async function testWebSocketConnection(port: number = 9224): Promise<bool
       resolve(false);
     }
   });
+}
+
+/**
+ * Prompt user for extension ID (for unpacked extensions)
+ */
+export async function promptForExtensionId(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stderr,
+    });
+
+    rl.question(`\nEnter the extension ID from chrome://extensions: `, (answer) => {
+      rl.close();
+      const id = answer.trim();
+      if (id.length === 32) {
+        resolve(id);
+      } else {
+        console.error(`❌ Invalid extension ID. Must be 32 characters.`);
+        resolve(null);
+      }
+    });
+  });
+}
+
+/**
+ * Query extension for its ID using chrome.runtime.sendMessage
+ * This is the most reliable way to get the extension ID for unpacked extensions
+ */
+export async function queryExtensionForId(port: number = 9224): Promise<string | null> {
+  try {
+    console.error(`\n[DEBUG] Attempting to query extension for its ID via DevTools...`);
+    
+    // Try to connect to the DevTools Protocol on the default port
+    const { WebSocket } = await import('ws');
+    
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        console.error(`[DEBUG] DevTools connection timeout`);
+        resolve(null);
+      }, 5000);
+
+      try {
+        const ws = new WebSocket(`ws://localhost:${port}`);
+
+        ws.on('open', () => {
+          console.error(`[DEBUG] Connected to DevTools Protocol`);
+          
+          // Send a message to query the extension ID
+          // This uses the Runtime.evaluate command to execute JavaScript in the extension context
+          const message = {
+            id: 1,
+            method: 'Runtime.evaluate',
+            params: {
+              expression: `chrome.runtime.sendMessage(chrome.runtime.id, {action: 'GET_EXTENSION_ID'}, (response) => { console.log('EXT_ID:' + response.extensionId); })`
+            }
+          };
+
+          ws.send(JSON.stringify(message));
+          console.error(`[DEBUG] Sent extension ID query`);
+        });
+
+        ws.on('message', (data: string) => {
+          try {
+            const response = JSON.parse(data);
+            console.error(`[DEBUG] DevTools response:`, response);
+            
+            // Look for the extension ID in the response
+            if (response.result && response.result.value) {
+              const value = response.result.value;
+              if (typeof value === 'string' && value.includes('EXT_ID:')) {
+                const extId = value.split('EXT_ID:')[1];
+                if (extId && extId.length === 32) {
+                  clearTimeout(timeout);
+                  ws.close();
+                  console.error(`[DEBUG] Got extension ID from DevTools: ${extId}`);
+                  resolve(extId);
+                  return;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        });
+
+        ws.on('error', (error: any) => {
+          console.error(`[DEBUG] DevTools connection error:`, error.message);
+          clearTimeout(timeout);
+          resolve(null);
+        });
+
+        ws.on('close', () => {
+          clearTimeout(timeout);
+          resolve(null);
+        });
+      } catch (error: any) {
+        console.error(`[DEBUG] Failed to create WebSocket:`, error.message);
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  } catch (error: any) {
+    console.error(`[DEBUG] Error querying extension:`, error.message);
+    return null;
+  }
 }

@@ -16,6 +16,8 @@ import {
   getGravityExtensionDir,
   getGravityHostDir,
   detectGravityExtensionId,
+  queryExtensionForId,
+  promptForExtensionId,
   patchManifest,
   writeRegistryKey,
   registryKeyExists,
@@ -155,25 +157,59 @@ async function handleSetupNativeHost() {
     process.exit(1);
   }
 
-  // Step 1: Detect extension ID
-  console.error('🔍 Detecting Gravity extension ID...');
-  const extensionId = detectGravityExtensionId();
-
-  if (!extensionId) {
-    console.error('❌ Could not find Gravity extension.');
-    console.error('');
-    console.error('Make sure you have:');
-    console.error('1. Run: npx gravity-core setup-extension');
-    console.error('2. Opened Chrome and gone to: chrome://extensions');
-    console.error('3. Enabled "Developer mode" (toggle in top right)');
-    console.error('4. Clicked "Load unpacked"');
-    console.error('5. Selected the ~/.gravity-extension folder');
-    console.error('');
-    console.error('Then run this command again.');
-    process.exit(1);
+  // Step 1: Try to auto-detect extension ID
+  console.error('🔍 Detecting Gravity extension ID...\n');
+  
+  // First, try to query the extension directly (most reliable for unpacked extensions)
+  console.error('   Attempting automatic detection via extension...');
+  let extensionId = await queryExtensionForId();
+  
+  if (extensionId) {
+    console.error(`   ✅ Auto-detected extension ID: ${extensionId}\n`);
+  } else {
+    console.error('   ⏭️  Auto-detection failed, trying filesystem scan...');
+    
+    // Fallback: scan installed extensions
+    extensionId = detectGravityExtensionId();
+    
+    if (extensionId) {
+      console.error(`   ✅ Found extension ID: ${extensionId}\n`);
+    } else {
+      console.error('\n⚠️  Could not auto-detect extension ID.');
+      console.error('This is normal for unpacked (dev mode) extensions.\n');
+      
+      const useManual = await promptConfirm('Do you want to enter the extension ID manually?');
+      
+      if (useManual) {
+        console.error('\n📋 To find your extension ID:');
+        console.error('   1. Open Chrome and go to: chrome://extensions');
+        console.error('   2. Find "Gravity" in the list');
+        console.error('   3. Copy the ID shown below the extension name');
+        console.error('   4. Paste it below\n');
+        
+        extensionId = await promptForExtensionId();
+        
+        if (!extensionId) {
+          console.error('❌ Invalid extension ID provided.');
+          process.exit(1);
+        }
+        
+        console.error(`✅ Using extension ID: ${extensionId}\n`);
+      } else {
+        console.error('❌ Extension ID required to continue.');
+        console.error('');
+        console.error('Make sure you have:');
+        console.error('1. Run: npx gravity-core setup-extension');
+        console.error('2. Opened Chrome and gone to: chrome://extensions');
+        console.error('3. Enabled "Developer mode" (toggle in top right)');
+        console.error('4. Clicked "Load unpacked"');
+        console.error('5. Selected the ~/.gravity-extension folder');
+        console.error('');
+        console.error('Then run this command again.');
+        process.exit(1);
+      }
+    }
   }
-
-  console.error(`✅ Found extension ID: ${extensionId}\n`);
 
   // Step 2: Confirm registry modification
   const confirmed = await promptConfirm(
