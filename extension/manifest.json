@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Gravity",
-  "version": "1.0.12",
+  "version": "1.0.17",
   "description": "Gravity - Browser DevTools integration for MCP server",
   "permissions": [
     "debugger",
     "tabs",
-    "nativeMessaging"
+    "nativeMessaging",
+    "alarms",
+    "storage"
   ],
   "host_permissions": [
     "<all_urls>"

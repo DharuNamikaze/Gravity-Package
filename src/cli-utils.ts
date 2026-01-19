@@ -776,13 +776,11 @@ export async function startRegistrationServer(timeoutMs: number = 60000): Promis
       server.listen(port, '127.0.0.1', () => {
         selectedPort = port;
         console.error(`\n🌐 Registration server listening on http://127.0.0.1:${port}`);
-        console.error('📋 Waiting for extension to register...');
+        console.error('📋 Waiting for extension to register automatically...');
         console.error('');
-        console.error('   If the extension is already loaded in Chrome:');
-        console.error('   1. Click the Gravity extension icon');
-        console.error('   2. Click "Register with CLI"');
-        console.error('');
-        console.error('   Or reload the extension to trigger automatic registration.');
+        console.error('   The extension will register itself within 60 seconds.');
+        console.error('   If the extension is already loaded, it should register immediately.');
+        console.error('   If not loaded yet, load it now and it will auto-register.');
         console.error('');
       });
     };

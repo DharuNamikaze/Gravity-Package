@@ -35,46 +35,7 @@ This creates `~/.gravity-extension/` with all extension files.
 - Creates the directory in your home folder
 - Prints the path for the next step
 
-### Step 3: Setup Native Host (Windows Only)
-
-```bash
-gravity setup-native-host
-```
-
-This command:
-
-1. **Auto-detects extension ID**
-   - Scans Chrome's extension directory
-   - Finds the Gravity extension by name
-   - No manual ID lookup needed
-
-2. **Asks for confirmation**
-   ```
-   ⚠️  Gravity needs to add a native-messaging registry entry. Proceed? (y/n)
-   ```
-   - Type `y` to proceed
-   - Type `n` to cancel
-
-3. **Copies native host files**
-   - Creates `~/.gravity-host/` directory
-   - Copies native messaging host files
-
-4. **Patches manifest**
-   - Inserts your extension ID
-   - Updates path to native host executable
-
-5. **Writes registry key**
-   - Adds entry to Windows registry
-   - Location: `HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity.bridge`
-
-6. **Optionally restarts Chrome**
-   ```
-   ⚠️  Chrome is currently running. Restart Chrome for changes to take effect? (y/n)
-   ```
-   - Type `y` to restart Chrome
-   - Type `n` to restart manually later
-
-### Step 4: Load Extension in Chrome
+### Step 3: Load Extension in Chrome
 
 1. Open Chrome and go to `chrome://extensions`
 2. Enable "Developer mode" (toggle in top right corner)
@@ -82,10 +43,54 @@ This command:
 4. Select the `~/.gravity-extension` folder
 5. The Gravity extension should now appear in your extensions list
 
+**Important:** Keep the extension loaded for the next step!
+
+### Step 4: Setup Native Host (Windows Only)
+
+```bash
+npx gravity-core setup-native-host
+```
+
+This command will:
+
+1. **Start registration server**
+   - Starts a temporary local HTTP server
+   - Waits for the extension to register itself automatically
+   - Shows progress on screen
+
+2. **Extension auto-registers**
+   - The extension automatically detects the setup server
+   - Sends its ID to the server (no manual action needed!)
+   - Registration completes within seconds
+   - Uses chrome.alarms for periodic retries until successful
+   - Stops retrying automatically after successful registration
+
+   **No user action required!** The extension handles everything automatically.
+
+3. **Asks for confirmation**
+   ```
+   ⚠️  Gravity needs to add a native-messaging registry entry. Proceed? (y/n)
+   ```
+   - Type `y` to proceed
+   - Type `n` to cancel
+
+4. **Completes setup automatically**
+   - Copies native host files to `~/.gravity-host/`
+   - Patches manifest with your extension ID
+   - Writes Windows registry key
+   - Verifies configuration
+
+**Troubleshooting:**
+If automatic registration doesn't work within 60 seconds:
+- Ensure the extension is loaded in Chrome
+- Reload the extension (it will retry automatically)
+- Check Chrome's extension console for errors
+- As a last resort, the setup will offer manual ID entry
+
 ### Step 5: Test Connection
 
 ```bash
-gravity test-connection
+npx gravity-core test-connection
 ```
 
 This verifies everything is working:
@@ -96,7 +101,7 @@ This verifies everything is working:
 ✅ Manifest valid
 ✅ Extension ID configured: chrome-extension://xxxxx/
 ✅ Native host executable found
-✅ WebSocket connection successful
+⚠️  WebSocket connection not available (normal if MCP server not running)
 
 🎉 Gravity is ready! All checks passed.
 ```

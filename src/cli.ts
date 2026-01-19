@@ -213,8 +213,8 @@ async function handleSetupNativeHost() {
         console.error('3. Enabled "Developer mode" (toggle in top right)');
         console.error('4. Clicked "Load unpacked"');
         console.error('5. Selected the ~/.gravity-extension folder');
-        console.error('6. Clicked the Gravity extension icon and clicked "Register with CLI"');
         console.error('');
+        console.error('The extension will automatically register when loaded.');
         console.error('Then run this command again.');
         process.exit(1);
       }
@@ -358,16 +358,20 @@ async function handleTestConnection() {
     console.error('   ❌ Native host executable not found');
   }
 
-  // Check 5: WebSocket connection
+  // Check 5: WebSocket connection (optional - only works if MCP server is running)
   console.error('🔍 Testing WebSocket connection...');
+  console.error('   (This test requires the MCP server to be running)');
   const wsConnected = await testWebSocketConnection(9224);
-  checks.push({ name: 'WebSocket connection', passed: wsConnected });
-
+  
+  // Don't fail the overall test if WebSocket fails - it's expected if MCP server isn't running
   if (wsConnected) {
     console.error('   ✅ WebSocket connection successful');
+    checks.push({ name: 'WebSocket connection', passed: true });
   } else {
-    console.error('   ❌ WebSocket connection failed');
-    console.error('      Make sure the MCP server is running: gravity');
+    console.error('   ⚠️  WebSocket connection not available');
+    console.error('      This is normal if the MCP server is not running.');
+    console.error('      The MCP server starts automatically when you use Gravity in your IDE.');
+    // Don't add to checks array - this is optional
   }
 
   // Summary
@@ -382,7 +386,11 @@ async function handleTestConnection() {
   console.error('');
   if (allPassed) {
     console.error('🎉 Gravity is ready! All checks passed.\n');
-    console.error('   You can now use Gravity in your IDE.');
+    console.error('   Next steps:');
+    console.error('   1. Configure your IDE (see MCP_CONFIGURATION.md)');
+    console.error('   2. Open Chrome and click the Gravity extension icon');
+    console.error('   3. Click "Connect to Tab" on the page you want to debug');
+    console.error('   4. In your IDE, use Gravity tools to diagnose layout issues');
     process.exit(0);
   } else {
     console.error('⚠️  Some checks failed. Please review the errors above.\n');
