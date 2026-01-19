@@ -555,22 +555,32 @@ export async function promptForExtensionId(): Promise<string | null> {
  */
 export async function queryExtensionForId(port: number = 9224): Promise<string | null> {
   try {
-    console.error(`\n[DEBUG] Attempting to query extension for its ID via DevTools...`);
+    console.error(`\n[DEBUG STEP 1] Attempting to query extension for its ID via DevTools...`);
+    console.error(`[DEBUG STEP 1.1] Target port: ${port}`);
+    console.error(`[DEBUG STEP 1.2] WebSocket URL: ws://localhost:${port}`);
     
     // Try to connect to the DevTools Protocol on the default port
     const { WebSocket } = await import('ws');
+    console.error(`[DEBUG STEP 1.3] WebSocket module imported successfully`);
     
     return new Promise((resolve) => {
+      console.error(`[DEBUG STEP 2] Creating promise for DevTools connection...`);
+      
       const timeout = setTimeout(() => {
-        console.error(`[DEBUG] DevTools connection timeout`);
+        console.error(`[DEBUG STEP 5] TIMEOUT: DevTools connection did not respond within 5 seconds`);
+        console.error(`[DEBUG STEP 5.1] This means the MCP server is not running on port ${port}`);
+        console.error(`[DEBUG STEP 5.2] Falling back to filesystem scan...`);
         resolve(null);
       }, 5000);
 
       try {
+        console.error(`[DEBUG STEP 3] Creating WebSocket connection...`);
         const ws = new WebSocket(`ws://localhost:${port}`);
+        console.error(`[DEBUG STEP 3.1] WebSocket object created`);
 
         ws.on('open', () => {
-          console.error(`[DEBUG] Connected to DevTools Protocol`);
+          console.error(`[DEBUG STEP 4] SUCCESS: Connected to DevTools Protocol on port ${port}`);
+          console.error(`[DEBUG STEP 4.1] Sending extension ID query message...`);
           
           // Send a message to query the extension ID
           // This uses the Runtime.evaluate command to execute JavaScript in the extension context
@@ -582,52 +592,73 @@ export async function queryExtensionForId(port: number = 9224): Promise<string |
             }
           };
 
+          console.error(`[DEBUG STEP 4.2] Message to send:`, JSON.stringify(message));
           ws.send(JSON.stringify(message));
-          console.error(`[DEBUG] Sent extension ID query`);
+          console.error(`[DEBUG STEP 4.3] Message sent successfully`);
         });
 
         ws.on('message', (data: string) => {
+          console.error(`[DEBUG STEP 6] Received message from DevTools:`, data.substring(0, 100));
           try {
             const response = JSON.parse(data);
-            console.error(`[DEBUG] DevTools response:`, response);
+            console.error(`[DEBUG STEP 6.1] Parsed response:`, JSON.stringify(response).substring(0, 200));
             
             // Look for the extension ID in the response
             if (response.result && response.result.value) {
               const value = response.result.value;
+              console.error(`[DEBUG STEP 6.2] Found result.value:`, value);
+              
               if (typeof value === 'string' && value.includes('EXT_ID:')) {
                 const extId = value.split('EXT_ID:')[1];
+                console.error(`[DEBUG STEP 6.3] Extracted extension ID:`, extId);
+                
                 if (extId && extId.length === 32) {
+                  console.error(`[DEBUG STEP 6.4] Extension ID is valid (32 chars)`);
                   clearTimeout(timeout);
                   ws.close();
-                  console.error(`[DEBUG] Got extension ID from DevTools: ${extId}`);
+                  console.error(`[DEBUG STEP 7] SUCCESS: Got extension ID from DevTools: ${extId}`);
                   resolve(extId);
                   return;
+                } else {
+                  console.error(`[DEBUG STEP 6.4] Extension ID invalid length: ${extId?.length}`);
                 }
+              } else {
+                console.error(`[DEBUG STEP 6.2] Value does not contain EXT_ID marker`);
               }
+            } else {
+              console.error(`[DEBUG STEP 6.1] No result.value in response`);
             }
-          } catch (e) {
-            // Ignore parse errors
+          } catch (e: any) {
+            console.error(`[DEBUG STEP 6] Failed to parse message:`, e.message);
           }
         });
 
         ws.on('error', (error: any) => {
-          console.error(`[DEBUG] DevTools connection error:`, error.message);
+          console.error(`[DEBUG STEP 5] ERROR: DevTools connection failed`);
+          console.error(`[DEBUG STEP 5.1] Error type:`, error.code || error.message);
+          console.error(`[DEBUG STEP 5.2] This typically means:`);
+          console.error(`[DEBUG STEP 5.2.1] - MCP server is not running (npx gravity-core)`);
+          console.error(`[DEBUG STEP 5.2.2] - Port ${port} is blocked or in use`);
+          console.error(`[DEBUG STEP 5.2.3] - Extension is not loaded in Chrome`);
           clearTimeout(timeout);
           resolve(null);
         });
 
         ws.on('close', () => {
+          console.error(`[DEBUG STEP 8] WebSocket connection closed`);
           clearTimeout(timeout);
           resolve(null);
         });
       } catch (error: any) {
-        console.error(`[DEBUG] Failed to create WebSocket:`, error.message);
+        console.error(`[DEBUG STEP 3] EXCEPTION: Failed to create WebSocket`);
+        console.error(`[DEBUG STEP 3.1] Error:`, error.message);
         clearTimeout(timeout);
         resolve(null);
       }
     });
   } catch (error: any) {
-    console.error(`[DEBUG] Error querying extension:`, error.message);
+    console.error(`[DEBUG STEP 1] EXCEPTION: Error in queryExtensionForId`);
+    console.error(`[DEBUG STEP 1.1] Error:`, error.message);
     return null;
   }
 }

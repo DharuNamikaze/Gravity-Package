@@ -1,6 +1,6 @@
 {
   "name": "gravity-core",
-  "version": "1.0.12",
+  "version": "1.0.14",
   "description": "Gravity - AI-powered CSS layout diagnostics for any IDE. Connect your browser to get real-time layout issue detection.",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,7 +14,8 @@
     "native-host",
     "README.md",
     "LICENSE",
-    "SETUP.md"
+    "SETUP.md",
+    "MCP_CONFIGURATION.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -45,7 +46,6 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "chalk": "^5.6.2",
     "ws": "^8.18.0"
   },
   "devDependencies": {

@@ -65,37 +65,60 @@ This verifies:
 
 ### 6. Configure Your IDE
 
-**VSCode:**
+Gravity works with any IDE that supports MCP (Model Context Protocol).
+
+**Quick configuration examples:**
+
+**VSCode (.vscode/mcp.json):**
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "gravity": {
+      "type": "stdio",
       "command": "npx",
-      "args": ["gravity-core"],
-      "disabled": false
+      "args": ["gravity-core"]
     }
   }
 }
 ```
 
-**Cursor:**
-Same as VSCode
-
-**Kiro:**
+**Cursor (.cursor/mcp.json):**
 ```json
 {
   "mcpServers": {
     "gravity": {
       "command": "npx",
-      "args": ["gravity-core"],
-      "disabled": false
+      "args": ["gravity-core"]
     }
   }
 }
 ```
 
-**Warp or any IDE with MCP:**
-Add the same config to your IDE's MCP settings.
+**Zed (settings.json):**
+```json
+{
+  "context_servers": {
+    "gravity": {
+      "command": "npx",
+      "args": ["gravity-core"]
+    }
+  }
+}
+```
+
+**Claude Desktop (claude_desktop_config.json):**
+```json
+{
+  "mcpServers": {
+    "gravity": {
+      "command": "npx",
+      "args": ["gravity-core"]
+    }
+  }
+}
+```
+
+📖 **For complete configuration instructions for all IDEs, including Cline, Continue.dev, and troubleshooting, see [MCP_CONFIGURATION.md](MCP_CONFIGURATION.md)**
 
 ### 7. Start Diagnosing
 
