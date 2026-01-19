@@ -145,7 +145,7 @@ async function processRequest(request: MCPRequest): Promise<MCPResponse> {
           },
           serverInfo: {
             name: 'gravity',
-            version: '1.0.17',
+            version: '1.0.19',
           },
         },
       };
@@ -202,12 +202,15 @@ async function processRequest(request: MCPRequest): Promise<MCPResponse> {
  * Main MCP server entry point
  */
 async function main() {
-  // Connect to browser (diagnostics to stderr only)
+  // Try to connect to browser, but don't fail if not available
+  // The connection will be attempted when tools are called
   try {
     await bridge.connectBrowser(port);
+    console.error('✅ Connected to browser extension');
   } catch (error: any) {
-    console.error('Failed to connect to extension:', error.message);
-    process.exit(1);
+    console.error('⚠️  Browser extension not connected yet (this is normal)');
+    console.error('   The extension will connect when you click "Connect to Tab" in Chrome');
+    // Don't exit - the server should still start and respond to MCP protocol
   }
 
   // Listen for stdin (MCP protocol)

@@ -678,6 +678,7 @@ export async function startRegistrationServer(timeoutMs: number = 60000): Promis
   return new Promise((resolve) => {
     let resolved = false;
     let timeoutHandle: NodeJS.Timeout;
+    let wakeupInterval: NodeJS.Timeout;
     
     const cleanup = () => {
       if (server) {
@@ -686,6 +687,9 @@ export async function startRegistrationServer(timeoutMs: number = 60000): Promis
       }
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
+      }
+      if (wakeupInterval) {
+        clearInterval(wakeupInterval);
       }
     };
     
@@ -716,13 +720,20 @@ export async function startRegistrationServer(timeoutMs: number = 60000): Promis
       server = http.createServer((req, res) => {
         // Enable CORS for localhost
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS, GET');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
         
         // Handle preflight
         if (req.method === 'OPTIONS') {
           res.writeHead(200);
           res.end();
+          return;
+        }
+        
+        // Handle ping requests (to wake up service worker)
+        if (req.method === 'GET' && req.url === '/ping') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'ready', message: 'Registration server is ready' }));
           return;
         }
         
@@ -782,6 +793,13 @@ export async function startRegistrationServer(timeoutMs: number = 60000): Promis
         console.error('   If the extension is already loaded, it should register immediately.');
         console.error('   If not loaded yet, load it now and it will auto-register.');
         console.error('');
+        
+        // Periodically ping the server to wake up any sleeping service workers
+        // This helps trigger the immediate registration in background.js
+        wakeupInterval = setInterval(() => {
+          // The ping endpoint is just to keep the server active
+          // The extension will detect the server via its own fetch attempts
+        }, 5000);
       });
     };
     

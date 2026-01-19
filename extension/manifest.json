@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gravity",
-  "version": "1.0.17",
+  "version": "1.0.19",
   "description": "Gravity - Browser DevTools integration for MCP server",
   "permissions": [
     "debugger",
