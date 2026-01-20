@@ -26,16 +26,28 @@ function readNativeMessage(): Promise<any> {
 
     const readHeader = () => {
       const chunk = process.stdin.read(4 - headerBytesRead);
-      if (chunk) {
-        chunk.copy(headerBuffer, headerBytesRead);
-        headerBytesRead += chunk.length;
+      if (chunk === null) {
+        // No data available yet, wait for readable event
+        process.stdin.once('readable', readHeader);
+        return;
+      }
+      
+      if (chunk.length === 0) {
+        // EOF
+        reject(new Error('EOF: stdin closed'));
+        return;
+      }
 
-        if (headerBytesRead === 4) {
-          const messageLength = headerBuffer.readUInt32LE(0);
-          readMessage(messageLength);
-        } else {
-          process.stdin.once('readable', readHeader);
+      chunk.copy(headerBuffer, headerBytesRead);
+      headerBytesRead += chunk.length;
+
+      if (headerBytesRead === 4) {
+        const messageLength = headerBuffer.readUInt32LE(0);
+        if (messageLength === 0 || messageLength > 1024 * 1024) {
+          reject(new Error(`Invalid message length: ${messageLength}`));
+          return;
         }
+        readMessage(messageLength);
       } else {
         process.stdin.once('readable', readHeader);
       }
@@ -47,19 +59,27 @@ function readNativeMessage(): Promise<any> {
 
       const readChunk = () => {
         const chunk = process.stdin.read(length - messageBytesRead);
-        if (chunk) {
-          chunk.copy(messageBuffer, messageBytesRead);
-          messageBytesRead += chunk.length;
+        if (chunk === null) {
+          // No data available yet, wait for readable event
+          process.stdin.once('readable', readChunk);
+          return;
+        }
+        
+        if (chunk.length === 0) {
+          // EOF
+          reject(new Error('EOF: stdin closed during message read'));
+          return;
+        }
 
-          if (messageBytesRead === length) {
-            try {
-              const message = JSON.parse(messageBuffer.toString('utf-8'));
-              resolve(message);
-            } catch (error) {
-              reject(error);
-            }
-          } else {
-            process.stdin.once('readable', readChunk);
+        chunk.copy(messageBuffer, messageBytesRead);
+        messageBytesRead += chunk.length;
+
+        if (messageBytesRead === length) {
+          try {
+            const message = JSON.parse(messageBuffer.toString('utf-8'));
+            resolve(message);
+          } catch (error) {
+            reject(new Error(`Failed to parse JSON: ${error}`));
           }
         } else {
           process.stdin.once('readable', readChunk);
@@ -132,6 +152,9 @@ function startWebSocketServer() {
 async function listenToExtension() {
   console.error('[Native Host] Listening for extension messages...');
 
+  // Resume stdin to start reading
+  process.stdin.resume();
+
   while (true) {
     try {
       const message = await readNativeMessage();
@@ -144,10 +167,21 @@ async function listenToExtension() {
         console.error('[Native Host] No MCP client connected, message dropped');
       }
     } catch (error: any) {
+      if (error.message.includes('EOF') || error.message.includes('end')) {
+        console.error('[Native Host] Extension disconnected (stdin closed)');
+        break;
+      }
       console.error('[Native Host] Error reading from extension:', error.message);
       break;
     }
   }
+
+  // Cleanup on exit
+  console.error('[Native Host] Shutting down...');
+  if (wsServer) {
+    wsServer.close();
+  }
+  process.exit(0);
 }
 
 /**
@@ -156,16 +190,21 @@ async function listenToExtension() {
 async function main() {
   console.error('[Native Host] Starting Gravity Native Host...');
 
+  // Set stdin to binary mode for Native Messaging
+  process.stdin.setEncoding('binary');
+  process.stdin.pause();
+
   // Start WebSocket server
   startWebSocketServer();
 
   // Listen for extension messages
-  await listenToExtension();
+  listenToExtension().catch((error) => {
+    console.error('[Native Host] Fatal error in message loop:', error);
+    process.exit(1);
+  });
 
-  // Cleanup
-  if (wsServer) {
-    wsServer.close();
-  }
+  // Keep process alive
+  console.error('[Native Host] Ready and waiting for messages...');
 }
 
 // Handle graceful shutdown
