@@ -54,7 +54,6 @@ reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\com.gravity"
 HKEY_CURRENT_USER\Software\Google\Chrome\NativeMessagingHosts\com.gravity
     (Default)    REG_SZ    C:\Users\<user>\.gravity-host\manifest.json
 ```
-
 ### Step 4: Connect Extension to Tab
 
 1. Open any website in Chrome (e.g., `https://example.com`)
