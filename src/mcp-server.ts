@@ -145,7 +145,7 @@ async function processRequest(request: MCPRequest): Promise<MCPResponse> {
           },
           serverInfo: {
             name: 'gravity',
-            version: '1.0.21',
+            version: '1.0.22',
           },
         },
       };
