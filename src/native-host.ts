@@ -11,8 +11,10 @@
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 // @ts-ignore - no types available
-import nativeMessage from 'chrome-native-messaging';
+const nativeMessage = require('chrome-native-messaging');
 
 const WS_PORT = 9224;
 let wsServer: WebSocketServer | null = null;
