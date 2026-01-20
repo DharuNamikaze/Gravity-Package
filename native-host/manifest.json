@@ -1,5 +1,5 @@
 {
-  "name": "com.gravity.bridge",
+  "name": "com.gravity",
   "description": "Gravity - Native messaging host for Chrome extension",
   "path": "PLACEHOLDER_PATH",
   "type": "stdio",

@@ -271,7 +271,7 @@ async function handleSetupNativeHost() {
   // Step 5: Write registry key
   console.error('📝 Writing registry key...');
   try {
-    writeRegistryKey('com.gravity.bridge', manifestPath);
+    writeRegistryKey('com.gravity', manifestPath);
     console.error('✅ Registry key written successfully');
   } catch (error: any) {
     console.error('❌ Failed to write registry key:', error.message);
@@ -304,7 +304,7 @@ async function handleTestConnection() {
 
   // Check 1: Registry key exists
   console.error('🔍 Checking registry key...');
-  const regKeyExists = registryKeyExists('com.gravity.bridge');
+  const regKeyExists = registryKeyExists('com.gravity');
   checks.push({ name: 'Registry key exists', passed: regKeyExists });
 
   if (regKeyExists) {

@@ -17,15 +17,16 @@ Step 1: Install Package
 └──────────────────────────────────────────────────────────────┘
                             ↓
 
-Step 2: Load Extension
+Step 2: Load Extension & Setup Native Host
 ┌──────────────────────────────────────────────────────────────┐
 │ 1. Go to chrome://extensions                                 │
 │ 2. Enable "Developer mode"                                   │
 │ 3. Click "Load unpacked"                                     │
 │ 4. Select extension/ folder                                  │
+│ 5. Run: npx gravity-core setup-native-host                  │
 │                                                              │
 │ ✅ Extension loaded                                          │
-│ ✅ WebSocket server running (port 9224)                     │
+│ ✅ Native host registered                                    │
 │ ✅ Ready to connect to tabs                                 │
 └──────────────────────────────────────────────────────────────┘
                             ↓
@@ -96,16 +97,26 @@ User asks AI:
 │                                                              │
 │ 1. Receives request                                          │
 │ 2. Validates selector "#modal"                              │
-│ 3. Connects to extension via WebSocket                       │
+│ 3. Connects to native host via WebSocket (port 9224)        │
 └──────────────────────────────────────────────────────────────┘
         │
         │ WebSocket (port 9224)
         │
         ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Chrome Extension (background.js)                             │
+│ Native Host Bridge (native-host.js)                          │
 │                                                              │
 │ 1. Receives WebSocket connection                             │
+│ 2. Forwards CDP command via Native Messaging                │
+└──────────────────────────────────────────────────────────────┘
+        │
+        │ Native Messaging (stdio)
+        │
+        ▼
+┌──────────────────────────────────────────────────────────────┐
+│ Chrome Extension (background.js)                             │
+│                                                              │
+│ 1. Receives Native Messaging message                         │
 │ 2. Receives CDP command:                                     │
 │    {                                                         │
 │      "type": "cdp_request",                                  │
@@ -133,7 +144,17 @@ User asks AI:
 │ Chrome Extension (background.js)                             │
 │                                                              │
 │ 1. Receives browser data                                     │
-│ 2. Sends response via WebSocket:                             │
+│ 2. Sends response via Native Messaging                       │
+└──────────────────────────────────────────────────────────────┘
+        │
+        │ Native Messaging
+        │
+        ▼
+┌──────────────────────────────────────────────────────────────┐
+│ Native Host Bridge (native-host.js)                          │
+│                                                              │
+│ 1. Receives Native Messaging message                         │
+│ 2. Forwards via WebSocket:                                   │
 │    {                                                         │
 │      "type": "cdp_response",                                 │
 │      "result": { "nodeId": 42, ... }                         │
@@ -212,7 +233,8 @@ Extension Status:
 ┌──────────────────────────────────────────────────────────────┐
 │ 🟢 GREEN (Connected)                                         │
 │ - Extension connected to tab                                 │
-│ - WebSocket server running                                   │
+│ - Native host bridge running                                 │
+│ - WebSocket server listening on port 9224                    │
 │ - Ready to receive CDP commands                              │
 │ - MCP server can connect and diagnose                        │
 └──────────────────────────────────────────────────────────────┘
@@ -276,9 +298,10 @@ Results shown in Kiro
 
 ## Key Points
 
-✅ **No manual setup** - Extension runs native bridge automatically
+✅ **Native Host Bridge** - Bridges WebSocket (MCP) and Native Messaging (Extension)
+✅ **No manual setup** - Extension auto-registers with CLI
 ✅ **No terminal needed** - Everything happens in the background
-✅ **No port conflicts** - Extension manages port 9224
+✅ **No port conflicts** - Native host manages port 9224
 ✅ **Works everywhere** - Any IDE with MCP support
 ✅ **Real-time** - Instant diagnostics
 ✅ **Secure** - All data stays local
