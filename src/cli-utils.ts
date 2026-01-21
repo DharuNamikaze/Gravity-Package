@@ -347,6 +347,7 @@ function scanExtensionsDir(extensionsDir: string): string | null {
 
 /**
  * Patch manifest.json with extension ID and path
+ * Also patches the batch file with the correct path to native-host.js
  */
 export function patchManifest(manifestPath: string, extensionId: string, hostPath: string): void {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
@@ -355,6 +356,30 @@ export function patchManifest(manifestPath: string, extensionId: string, hostPat
   manifest.path = hostPath;
 
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+  // Patch the batch file with the correct path to native-host.js
+  // The native-host.js is in the globally installed package
+  const batPath = hostPath;
+  if (existsSync(batPath) && batPath.endsWith('.bat')) {
+    try {
+      // Find the globally installed gravity-core package
+      const npmRoot = execSync('npm root -g', { encoding: 'utf-8' }).trim();
+      const nativeHostPath = join(npmRoot, 'gravity-core', 'dist', 'native-host.js');
+      
+      // Create the batch file content with absolute path
+      const batContent = `@echo off
+REM Gravity Native Host
+REM This script bridges WebSocket (MCP server) and Native Messaging (Chrome extension)
+
+REM Start the native host bridge with absolute path
+node "${nativeHostPath}"
+`;
+      
+      writeFileSync(batPath, batContent);
+    } catch (error: any) {
+      console.error('⚠️  Warning: Could not patch batch file:', error.message);
+    }
+  }
 }
 
 /**

@@ -83,18 +83,33 @@ const transform = new nativeMessage.Transform((msg: any, push: (msg: any) => voi
  */
 function main() {
   console.error('[Native Host] Starting Gravity Native Host...');
+  console.error('[Native Host] Node version:', process.version);
+  console.error('[Native Host] Working directory:', process.cwd());
+  console.error('[Native Host] Script path:', import.meta.url);
+  console.error('[Native Host] Arguments:', process.argv);
 
   // Start WebSocket server
-  startWebSocketServer();
+  try {
+    startWebSocketServer();
+  } catch (error: any) {
+    console.error('[Native Host] FATAL: Failed to start WebSocket server:', error);
+    process.exit(1);
+  }
 
   // Setup Native Messaging pipeline
-  process.stdin
-    .pipe(input)
-    .pipe(transform)
-    .pipe(output)
-    .pipe(process.stdout);
+  try {
+    console.error('[Native Host] Setting up Native Messaging pipeline...');
+    process.stdin
+      .pipe(input)
+      .pipe(transform)
+      .pipe(output)
+      .pipe(process.stdout);
 
-  console.error('[Native Host] Ready and waiting for messages...');
+    console.error('[Native Host] Ready and waiting for messages...');
+  } catch (error: any) {
+    console.error('[Native Host] FATAL: Failed to setup pipeline:', error);
+    process.exit(1);
+  }
 
   // Handle stdin close
   process.stdin.on('end', () => {
@@ -103,6 +118,16 @@ function main() {
       wsServer.close();
     }
     process.exit(0);
+  });
+
+  // Handle stdin error
+  process.stdin.on('error', (error: Error) => {
+    console.error('[Native Host] stdin error:', error);
+  });
+
+  // Handle stdout error
+  process.stdout.on('error', (error: Error) => {
+    console.error('[Native Host] stdout error:', error);
   });
 }
 
