@@ -12,6 +12,10 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { createRequire } from 'module';
+import { writeFileSync, appendFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
+
 const require = createRequire(import.meta.url);
 // @ts-ignore - no types available
 const nativeMessage = require('chrome-native-messaging');
@@ -20,42 +24,56 @@ const WS_PORT = 9224;
 let wsServer: WebSocketServer | null = null;
 let wsClient: WebSocket | null = null;
 
+// Log file for debugging
+const logFile = join(homedir(), '.gravity-host', 'native-host.log');
+
+function log(message: string) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}\n`;
+  try {
+    appendFileSync(logFile, logMessage);
+  } catch (e) {
+    // Ignore file write errors
+  }
+  console.error(message);
+}
+
 /**
  * Start WebSocket server for MCP connections
  */
 function startWebSocketServer() {
   wsServer = new WebSocketServer({ port: WS_PORT });
 
-  console.error('[Native Host] WebSocket server listening on port', WS_PORT);
+  log('[Native Host] WebSocket server listening on port ' + WS_PORT);
 
   wsServer.on('connection', (ws: WebSocket) => {
-    console.error('[Native Host] MCP server connected');
+    log('[Native Host] MCP server connected');
     wsClient = ws;
 
     ws.on('message', (data: Buffer) => {
       try {
         const message = JSON.parse(data.toString());
-        console.error('[Native Host] MCP → Extension:', message.type || message.method);
+        log('[Native Host] MCP → Extension: ' + (message.type || message.method));
 
         // Forward to extension via native messaging (stdout)
         output.write(message);
       } catch (error: any) {
-        console.error('[Native Host] Error processing WebSocket message:', error.message);
+        log('[Native Host] Error processing WebSocket message: ' + error.message);
       }
     });
 
     ws.on('close', () => {
-      console.error('[Native Host] MCP server disconnected');
+      log('[Native Host] MCP server disconnected');
       wsClient = null;
     });
 
     ws.on('error', (error: Error) => {
-      console.error('[Native Host] WebSocket error:', error.message);
+      log('[Native Host] WebSocket error: ' + error.message);
     });
   });
 
   wsServer.on('error', (error: Error) => {
-    console.error('[Native Host] WebSocket server error:', error.message);
+    log('[Native Host] WebSocket server error: ' + error.message);
     process.exit(1);
   });
 }
@@ -66,54 +84,69 @@ function startWebSocketServer() {
 const input = new nativeMessage.Input();
 const output = new nativeMessage.Output();
 const transform = new nativeMessage.Transform((msg: any, push: (msg: any) => void, done: () => void) => {
-  console.error('[Native Host] Extension → MCP:', msg.type);
+  log('[Native Host] Extension → MCP: ' + msg.type);
 
   // Forward to MCP server via WebSocket
   if (wsClient && wsClient.readyState === WebSocket.OPEN) {
     wsClient.send(JSON.stringify(msg));
+    log('[Native Host] Message forwarded to MCP server');
   } else {
-    console.error('[Native Host] No MCP client connected, message dropped');
+    log('[Native Host] No MCP client connected, message dropped');
   }
 
   done();
+});
+
+// Add error handlers for the streams
+input.on('error', (error: Error) => {
+  log('[Native Host] Input stream error: ' + error.message);
+});
+
+output.on('error', (error: Error) => {
+  log('[Native Host] Output stream error: ' + error.message);
+});
+
+transform.on('error', (error: Error) => {
+  log('[Native Host] Transform stream error: ' + error.message);
 });
 
 /**
  * Main entry point
  */
 function main() {
-  console.error('[Native Host] Starting Gravity Native Host...');
-  console.error('[Native Host] Node version:', process.version);
-  console.error('[Native Host] Working directory:', process.cwd());
-  console.error('[Native Host] Script path:', import.meta.url);
-  console.error('[Native Host] Arguments:', process.argv);
+  log('[Native Host] Starting Gravity Native Host...');
+  log('[Native Host] Node version: ' + process.version);
+  log('[Native Host] Working directory: ' + process.cwd());
+  log('[Native Host] Script path: ' + import.meta.url);
+  log('[Native Host] Arguments: ' + JSON.stringify(process.argv));
+  log('[Native Host] Log file: ' + logFile);
 
   // Start WebSocket server
   try {
     startWebSocketServer();
   } catch (error: any) {
-    console.error('[Native Host] FATAL: Failed to start WebSocket server:', error);
+    log('[Native Host] FATAL: Failed to start WebSocket server: ' + error.message);
     process.exit(1);
   }
 
   // Setup Native Messaging pipeline
   try {
-    console.error('[Native Host] Setting up Native Messaging pipeline...');
+    log('[Native Host] Setting up Native Messaging pipeline...');
     process.stdin
       .pipe(input)
       .pipe(transform)
       .pipe(output)
       .pipe(process.stdout);
 
-    console.error('[Native Host] Ready and waiting for messages...');
+    log('[Native Host] Ready and waiting for messages...');
   } catch (error: any) {
-    console.error('[Native Host] FATAL: Failed to setup pipeline:', error);
+    log('[Native Host] FATAL: Failed to setup pipeline: ' + error.message);
     process.exit(1);
   }
 
   // Handle stdin close
   process.stdin.on('end', () => {
-    console.error('[Native Host] Extension disconnected (stdin closed)');
+    log('[Native Host] Extension disconnected (stdin closed)');
     if (wsServer) {
       wsServer.close();
     }
@@ -122,18 +155,40 @@ function main() {
 
   // Handle stdin error
   process.stdin.on('error', (error: Error) => {
-    console.error('[Native Host] stdin error:', error);
+    log('[Native Host] stdin error: ' + error.message);
+    process.exit(1);
   });
 
   // Handle stdout error
   process.stdout.on('error', (error: Error) => {
-    console.error('[Native Host] stdout error:', error);
+    log('[Native Host] stdout error: ' + error.message);
+    process.exit(1);
   });
+
+  // Log when stdin is readable
+  process.stdin.on('readable', () => {
+    log('[Native Host] stdin is readable');
+  });
+
+  // Prevent process from exiting due to unhandled errors
+  process.on('uncaughtException', (error: Error) => {
+    log('[Native Host] Uncaught exception: ' + error.message + '\n' + error.stack);
+  });
+
+  process.on('unhandledRejection', (reason: any) => {
+    log('[Native Host] Unhandled rejection: ' + JSON.stringify(reason));
+  });
+
+  // Keep the process alive
+  setInterval(() => {
+    // This prevents the process from exiting
+    // The interval will be cleared when stdin closes
+  }, 60000);
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.error('[Native Host] Shutting down...');
+  log('[Native Host] Shutting down (SIGINT)...');
   if (wsServer) {
     wsServer.close();
   }
@@ -141,11 +196,16 @@ process.on('SIGINT', () => {
 });
 
 process.on('SIGTERM', () => {
-  console.error('[Native Host] Shutting down...');
+  log('[Native Host] Shutting down (SIGTERM)...');
   if (wsServer) {
     wsServer.close();
   }
   process.exit(0);
+});
+
+// Log process exit
+process.on('exit', (code) => {
+  log('[Native Host] Process exiting with code: ' + code);
 });
 
 main();
